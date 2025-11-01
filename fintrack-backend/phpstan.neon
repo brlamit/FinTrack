@@ -1,0 +1,26 @@
+includes:
+    - ./vendor/nunomaduro/larastan/extension.neon
+
+parameters:
+    paths:
+        - app
+        - config
+        - database
+        - routes
+
+    # The level 9 is the highest level
+    level: 5
+
+    ignoreErrors:
+        - '#PHPDoc tag @var#'
+        - '#Access to an undefined property#'
+        - '#Call to an undefined method#'
+
+    excludePaths:
+        - vendor/*
+        - storage/*
+        - bootstrap/cache/*
+        - node_modules/*
+        - resources/js/*
+        - resources/css/*
+        - public/*

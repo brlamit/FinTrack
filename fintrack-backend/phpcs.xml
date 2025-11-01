@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<ruleset name="Laravel">
+    <description>Laravel coding standard</description>
+
+    <!-- Include the PSR-12 standard -->
+    <rule ref="PSR12">
+        <!-- Exclude some rules that conflict with Laravel conventions -->
+        <exclude name="PSR12.Properties.ConstantVisibility"/>
+    </rule>
+
+    <!-- Scan PHP files -->
+    <arg name="extensions" value="php"/>
+
+    <!-- Directories to scan -->
+    <file>app</file>
+    <file>config</file>
+    <file>database</file>
+    <file>routes</file>
+    <file>tests</file>
+
+    <!-- Exclude vendor and other directories -->
+    <exclude-pattern>vendor/*</exclude-pattern>
+    <exclude-pattern>storage/*</exclude-pattern>
+    <exclude-pattern>bootstrap/cache/*</exclude-pattern>
+    <exclude-pattern>node_modules/*</exclude-pattern>
+    <exclude-pattern>resources/js/*</exclude-pattern>
+    <exclude-pattern>resources/css/*</exclude-pattern>
+    <exclude-pattern>public/*</exclude-pattern>
+</ruleset>
