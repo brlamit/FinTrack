@@ -31,7 +31,7 @@ class GroupMemberController extends Controller
 
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
+            'email' => 'required|email',
             'phone' => 'nullable|string|max:20',
         ]);
 
@@ -43,11 +43,52 @@ class GroupMemberController extends Controller
             ], 422);
         }
 
-        // Generate username and password
+        // Check if user already exists
+        $user = User::where('email', $request->email)->first();
+
+        if ($user) {
+            // Check if user is already a member of the group
+            $existingMember = $group->members()->where('user_id', $user->id)->first();
+            if ($existingMember) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This user is already a member of the group',
+                ], 422);
+            }
+
+            // Add existing user to group
+            GroupMember::create([
+                'group_id' => $group->id,
+                'user_id' => $user->id,
+                'role' => 'member',
+                'joined_at' => now(),
+            ]);
+
+            // Send notification email to existing user
+            try {
+                Mail::to($user->email)->send(new GroupInviteMail($user, $group, null));
+            } catch (\Exception $e) {
+                \Log::error('Failed to send group invite email to existing member: ' . $e->getMessage());
+            }
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Existing member added to group successfully',
+                    'data' => [
+                        'user' => $user,
+                    ],
+                ]);
+            }
+
+            return redirect()->back()->with('success', 'Existing member added to group successfully.');
+        }
+
+        // Generate username and password for new user
         $username = $this->generateUsername($request->name);
         $password = $this->generatePassword();
 
-        // Create user
+        // Create new user
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
@@ -67,13 +108,17 @@ class GroupMemberController extends Controller
             'joined_at' => now(),
         ]);
 
-        // Send email (queued)
-        Mail::to($user->email)->queue(new GroupInviteMail($user, $group, $password));
+        // Send email immediately to new member
+        try {
+            Mail::to($user->email)->send(new GroupInviteMail($user, $group, $password));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send group invite email: ' . $e->getMessage());
+        }
 
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Member invited successfully',
+                'message' => 'New member invited successfully',
                 'data' => [
                     'user' => $user,
                     'username' => $username,
@@ -81,7 +126,7 @@ class GroupMemberController extends Controller
             ]);
         }
 
-        return redirect()->back()->with('success', 'Member invited successfully. Username: ' . $username);
+        return redirect()->back()->with('success', 'New member invited successfully. Username: ' . $username);
     }
 
     /**
@@ -110,5 +155,64 @@ class GroupMemberController extends Controller
     private function generatePassword(): string
     {
         return Str::random(8);
+    }
+
+    /**
+     * Remove a member from the group.
+     */
+    public function remove(Request $request, Group $group, $memberId): JsonResponse|\Illuminate\Http\RedirectResponse
+    {
+        \Log::info("RemoveMember: Attempting to remove member {$memberId} from group {$group->id}");
+        
+        // Check if requesting user is admin of the group
+        $adminMember = $group->members()->where('user_id', auth()->id())->first();
+        if (!$adminMember || $adminMember->role !== 'admin') {
+            \Log::warning("RemoveMember: Unauthorized attempt by user " . auth()->id());
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
+        // Find the member in the group
+        $member = $group->members()->find($memberId);
+        if (!$member) {
+            \Log::warning("RemoveMember: Member {$memberId} not found in group {$group->id}");
+            return response()->json([
+                'success' => false,
+                'message' => 'Member not found in this group',
+            ], 404);
+        }
+
+        // Cannot remove the group owner
+        if ($member->user_id === $group->owner_id) {
+            \Log::warning("RemoveMember: Attempted to remove group owner");
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot remove the group owner',
+            ], 422);
+        }
+
+        // Cannot remove self as admin
+        if ($member->user_id === auth()->id()) {
+            \Log::warning("RemoveMember: User tried to remove themselves");
+            return response()->json([
+                'success' => false,
+                'message' => 'You cannot remove yourself from the group',
+            ], 422);
+        }
+
+        // Delete the GroupMember record (removes user from group, doesn't delete user)
+        $member->delete();
+        \Log::info("RemoveMember: Successfully removed member {$memberId} from group {$group->id}");
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Member removed from group successfully',
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Member removed from group successfully.');
     }
 }
