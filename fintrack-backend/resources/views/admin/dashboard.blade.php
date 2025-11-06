@@ -49,7 +49,7 @@
                     @foreach($stats['recent_users'] as $user)
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         {{ $user->name }}
-                        <span class="badge bg-primary rounded-pill">{{ $user->created_at->diffForHumans() }}</span>
+                        {{-- <span class="badge bg-primary rounded-pill">{{ $user->created_at->diffForHumans() }}</span> --}}
                     </li>
                     @endforeach
                 </ul>

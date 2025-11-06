@@ -22,10 +22,21 @@ class RoleMiddleware
             ], 401);
         }
 
-        if (!auth()->user()->isAdmin() && auth()->user()->role !== $role) {
+        $user = auth()->user();
+
+        // For admin role, check isAdmin method
+        if ($role === 'admin' && !$user->isAdmin()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Forbidden',
+                'message' => 'Forbidden - Admin access required',
+            ], 403);
+        }
+
+        // For other roles, check exact role match
+        if ($role !== 'admin' && $user->role !== $role) {
+            return response()->json([
+                'success' => false,
+                'message' => "Forbidden - {$role} access required",
             ], 403);
         }
 

@@ -21,9 +21,21 @@ class DatabaseSeeder extends Seeder
 
         // User::factory(10)->create();
 
+        // Create admin user
+        User::factory()->create([
+            'name' => 'Admin User',
+            'email' => 'admin@fintrack.com',
+            'role' => 'admin',
+            'password_changed_at' => now(),
+            'first_login_done' => true,
+        ]);
+
+        // Create regular test user
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
+            'password_changed_at' => now(),
+            'first_login_done' => true,
         ]);
     }
 }

@@ -61,7 +61,7 @@ class ReportController extends Controller
                 break;
 
             case 'date':
-                $report = $query->selectRaw('DATE(transaction_date) as date, SUM(amount) as total')
+                $report = $query->selectRaw('transaction_date::date as date, SUM(amount) as total')
                     ->groupBy('date')
                     ->orderBy('date')
                     ->get()
@@ -74,7 +74,7 @@ class ReportController extends Controller
                 break;
 
             case 'month':
-                $report = $query->selectRaw('YEAR(transaction_date) as year, MONTH(transaction_date) as month, SUM(amount) as total')
+                $report = $query->selectRaw('EXTRACT(YEAR FROM transaction_date) as year, EXTRACT(MONTH FROM transaction_date) as month, SUM(amount) as total')
                     ->groupBy('year', 'month')
                     ->orderBy('year')
                     ->orderBy('month')

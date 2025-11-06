@@ -24,15 +24,14 @@ class UserController extends Controller
             'totalBalance' => '$0.00',
             'thisMonth' => '$0.00',
             'categoryCount' => 0,
-            'budgetCount' => Budget::where('owner_id', $user->id)
-                ->where('owner_type', 'user')
+            'budgetCount' => Budget::where('user_id', $user->id)
                 ->count(),
             'recentTransactions' => Transaction::where('user_id', $user->id)
                 ->latest()
                 ->limit(5)
                 ->get(),
-            'activeBudgets' => Budget::where('owner_id', $user->id)
-                ->where('owner_type', 'user')
+            'activeBudgets' => Budget::where('user_id', $user->id)
+                ->where('is_active', true)
                 ->limit(3)
                 ->get(),
         ]);
@@ -246,8 +245,7 @@ class UserController extends Controller
      */
     public function budgets()
     {
-        $budgets = Budget::where('owner_id', auth()->id())
-            ->where('owner_type', 'user')
+        $budgets = Budget::where('user_id', auth()->id())
             ->with('category')
             ->paginate(10);
 
