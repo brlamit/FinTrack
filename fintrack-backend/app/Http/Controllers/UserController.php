@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Transaction;
 use App\Models\Group;
 use App\Models\Budget;
+use App\Services\OtpService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -13,6 +14,9 @@ use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
+    public function __construct(private readonly OtpService $otpService)
+    {
+    }
     /**
      * Show user dashboard
      */
@@ -121,14 +125,35 @@ class UserController extends Controller
             'new_password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, and one number.',
         ]);
 
+        $otpDigits = [
+            trim((string) $request->input('otp_1')),
+            trim((string) $request->input('otp_2')),
+            trim((string) $request->input('otp_3')),
+            trim((string) $request->input('otp_4')),
+        ];
+
+        $otpCode = implode('', $otpDigits);
+
+        if (strlen($otpCode) !== 4 || !ctype_digit($otpCode)) {
+            return back()->withErrors(['otp' => 'Enter the 4-digit verification code.']);
+        }
+
         // Verify current password
         if (!Hash::check($validated['current_password'], $user->password)) {
             return back()
                 ->withErrors(['current_password' => 'The provided password does not match our records.']);
         }
 
+        if (!$this->otpService->validate($user, 'password_change', $otpCode)) {
+            return back()->withErrors(['otp' => 'The verification code is invalid or has expired.']);
+        }
+
         // Update password
-        $user->update(['password' => Hash::make($validated['new_password'])]);
+        $user->update([
+            'password' => Hash::make($validated['new_password']),
+            'password_changed_at' => now(),
+            'first_login_done' => true,
+        ]);
 
         return back()->with('password_updated', 'Password updated successfully!');
     }

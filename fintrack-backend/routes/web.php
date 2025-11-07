@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\AdminGroupController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\OtpController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -46,8 +47,13 @@ Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])->n
 Route::post('/forgot-password', [AuthController::class, 'sendResetLink'])->name('auth.send-reset-link');
 
 // Reset password routes
-Route::get('/reset-password/{token}', [AuthController::class, 'showResetPassword'])->name('auth.reset-password');
+Route::get('/reset-password', [AuthController::class, 'showResetPassword'])->name('auth.reset-password');
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('auth.reset-password.post');
+
+// OTP routes
+Route::get('/verify-otp', [OtpController::class, 'show'])->name('auth.otp.show');
+Route::post('/verify-otp', [OtpController::class, 'verify'])->name('auth.otp.verify');
+Route::post('/verify-otp/resend', [OtpController::class, 'resend'])->name('auth.otp.resend');
 
 // Logout route (requires auth)
 Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout')->middleware('auth');
@@ -87,6 +93,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/profile', [UserController::class, 'update'])->name('user.update');
     Route::get('/security', [UserController::class, 'security'])->name('user.security');
     Route::put('/password', [UserController::class, 'updatePassword'])->name('user.update-password');
+    Route::post('/password/send-otp', [OtpController::class, 'sendPasswordChangeOtp'])->name('user.password.send-otp');
     Route::get('/preferences', [UserController::class, 'preferences'])->name('user.preferences');
     Route::put('/preferences', [UserController::class, 'updatePreferences'])->name('user.update-preferences');
     Route::post('/logout-all', [UserController::class, 'logoutAll'])->name('user.logout-all');

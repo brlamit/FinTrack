@@ -19,6 +19,13 @@
                         </div>
                     @endif
 
+                    @if (session('status'))
+                        <div class="alert alert-info alert-dismissible fade show" role="alert">
+                            {{ session('status') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    @endif
+
                     @if ($errors->has('password_errors'))
                         <div class="alert alert-danger">
                             <ul class="mb-0">
@@ -29,7 +36,12 @@
                         </div>
                     @endif
 
-                    <form method="POST" action="{{ route('user.update-password') }}">
+                    <form method="POST" action="{{ route('user.password.send-otp') }}" class="mb-3">
+                        @csrf
+                        <button type="submit" class="btn btn-outline-primary btn-sm">Send verification code</button>
+                    </form>
+
+                    <form method="POST" action="{{ route('user.update-password') }}" id="password-update-form">
                         @csrf
                         @method('PUT')
 
@@ -58,6 +70,20 @@
                             <label for="new_password_confirmation" class="form-label">Confirm New Password <span class="text-danger">*</span></label>
                             <input type="password" class="form-control" 
                                    id="new_password_confirmation" name="new_password_confirmation" required>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">Verification Code <span class="text-danger">*</span></label>
+                            <div class="d-flex gap-2 justify-content-start flex-wrap">
+                                <input type="text" inputmode="numeric" maxlength="1" name="otp_1" class="form-control otp-input @error('otp') is-invalid @enderror" style="width: 60px; text-align: center;">
+                                <input type="text" inputmode="numeric" maxlength="1" name="otp_2" class="form-control otp-input" style="width: 60px; text-align: center;">
+                                <input type="text" inputmode="numeric" maxlength="1" name="otp_3" class="form-control otp-input" style="width: 60px; text-align: center;">
+                                <input type="text" inputmode="numeric" maxlength="1" name="otp_4" class="form-control otp-input" style="width: 60px; text-align: center;">
+                            </div>
+                            <small class="text-muted">Enter the 4-digit code we emailed you.</small>
+                            @error('otp')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
                         </div>
 
                         <button type="submit" class="btn btn-primary">
@@ -150,3 +176,26 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const inputs = document.querySelectorAll('#password-update-form .otp-input');
+        inputs.forEach((input, index) => {
+            input.addEventListener('input', () => {
+                const value = input.value.replace(/\D/g, '');
+                input.value = value;
+                if (value && index < inputs.length - 1) {
+                    inputs[index + 1].focus();
+                }
+            });
+
+            input.addEventListener('keydown', (event) => {
+                if (event.key === 'Backspace' && !input.value && index > 0) {
+                    inputs[index - 1].focus();
+                }
+            });
+        });
+    });
+</script>
+@endpush

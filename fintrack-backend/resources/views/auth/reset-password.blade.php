@@ -19,11 +19,10 @@
                         <form method="POST" action="{{ route('auth.reset-password.post') }}">
                             @csrf
 
-                            <input type="hidden" name="token" value="{{ $request->route('token') }}">
-
                             <div class="mb-3">
                                 <label for="email" class="form-label">Email Address</label>
-                                <input type="email" class="form-control @error('email') is-invalid @enderror" id="email" name="email" value="{{ old('email', $request->email) }}" required autofocus>
+                                <input type="email" class="form-control @error('email') is-invalid @enderror" id="email" name="email" value="{{ old('email', $email ?? '') }}" required readonly>
+                                <div class="form-text">We sent the verification code to this email.</div>
                                 @error('email')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror

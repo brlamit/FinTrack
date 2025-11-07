@@ -3,13 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Notifications\OtpNotification;
+use App\Services\OtpService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    public function __construct(private readonly OtpService $otpService)
+    {
+    }
     /**
      * Show login form
      */
@@ -46,6 +52,19 @@ class AuthController extends Controller
             $request->session()->regenerate();
             
             $user = Auth::user();
+
+            if (!$user->email_verified_at) {
+                Auth::logout();
+
+                $otp = $this->otpService->generate($user, 'registration');
+                $user->notify(new OtpNotification($otp->code, 'registration'));
+
+                Session::put('otp.context', 'registration');
+                Session::put('otp.user_id', $user->id);
+
+                return redirect()->route('auth.otp.show')
+                    ->with('status', 'Please verify your email address. We have sent you a new code.');
+            }
 
             // Check if user needs to change password on first login
             if (!$user->first_login_done) {
@@ -85,15 +104,20 @@ class AuthController extends Controller
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
+            'email_verified_at' => null,
             'password' => Hash::make($validated['password']),
             'password_changed_at' => now(),
             'first_login_done' => true,
         ]);
 
-        Auth::login($user);
+        $otp = $this->otpService->generate($user, 'registration');
+        $user->notify(new OtpNotification($otp->code, 'registration'));
 
-        return redirect()->route('user.dashboard')
-            ->with('success', 'Account created successfully! Welcome to FinTrack.');
+        Session::put('otp.context', 'registration');
+        Session::put('otp.user_id', $user->id);
+
+        return redirect()->route('auth.otp.show')
+            ->with('status', 'We have sent a verification code to your email. Enter the code to finish registration.');
     }
 
     /**
@@ -155,21 +179,32 @@ class AuthController extends Controller
             return back()->with('status', 'If that email address is in our system, we have sent a password reset link.');
         }
 
-        // Generate reset token
-        $token = app('auth.password.broker')->createToken($user);
+        $otp = $this->otpService->generate($user, 'password_reset');
+        $user->notify(new OtpNotification($otp->code, 'password_reset'));
 
-        // Send password reset email
-        // TODO: Implement password reset email sending
+        Session::put('otp.context', 'password_reset');
+        Session::put('otp.user_id', $user->id);
 
-        return back()->with('status', 'A password reset link has been sent to your email address.');
+        return redirect()->route('auth.otp.show')
+            ->with('status', 'If that email exists, we have sent a verification code to it. Please check your inbox.');
     }
 
     /**
      * Show password reset form
      */
-    public function showResetPassword($token)
+    public function showResetPassword()
     {
-        return view('auth.reset-password', ['token' => $token]);
+        if (!Session::get('password_reset.verified')) {
+            return redirect()->route('auth.forgot-password');
+        }
+
+        $email = Session::get('password_reset.email');
+
+        if (!$email) {
+            return redirect()->route('auth.forgot-password');
+        }
+
+        return view('auth.reset-password', ['email' => $email]);
     }
 
     /**
@@ -178,7 +213,6 @@ class AuthController extends Controller
     public function resetPassword(Request $request)
     {
         $validated = $request->validate([
-            'token' => 'required',
             'email' => 'required|email',
             'password' => [
                 'required',
@@ -188,6 +222,14 @@ class AuthController extends Controller
                 'confirmed',
             ],
         ]);
+
+        $emailFromSession = Session::get('password_reset.email');
+
+        if (!$emailFromSession || $emailFromSession !== $validated['email']) {
+            return redirect()->route('auth.forgot-password')->withErrors([
+                'email' => 'Verification required. Request a new password reset.',
+            ]);
+        }
 
         $user = User::where('email', $validated['email'])->first();
 
@@ -199,6 +241,8 @@ class AuthController extends Controller
             'password' => Hash::make($validated['password']),
             'password_changed_at' => now(),
         ]);
+
+    Session::forget(['password_reset.email', 'password_reset.verified']);
 
         Auth::login($user);
 

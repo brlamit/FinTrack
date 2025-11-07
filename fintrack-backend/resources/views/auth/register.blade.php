@@ -16,6 +16,12 @@
                         <p class="text-center text-muted">Create your account to start tracking finances</p>
                     </div>
                     <div class="card-body">
+                        @if (session('status'))
+                            <div class="alert alert-info">
+                                {{ session('status') }}
+                            </div>
+                        @endif
+
                         <form method="POST" action="{{ route('auth.register.post') }}">
                             @csrf
 

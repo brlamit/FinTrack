@@ -13,7 +13,7 @@
                 <div class="card">
                     <div class="card-header">
                         <h3 class="text-center">Reset Password</h3>
-                        <p class="text-center text-muted">Enter your email address and we'll send you a link to reset your password</p>
+                        <p class="text-center text-muted">Enter your email and we'll send you a 4-digit verification code</p>
                     </div>
                     <div class="card-body">
                         @if(session('status'))
@@ -34,7 +34,7 @@
                             </div>
 
                             <div class="d-grid">
-                                <button type="submit" class="btn btn-primary">Send Reset Link</button>
+                                <button type="submit" class="btn btn-primary">Send Verification Code</button>
                             </div>
                         </form>
 
