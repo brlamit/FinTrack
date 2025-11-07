@@ -29,6 +29,7 @@ class User extends Authenticatable
         'invited_at',
         'status',
         'password_changed_at',
+        'first_login_done',
     ];
 
     /**

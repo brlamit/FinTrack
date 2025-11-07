@@ -48,7 +48,7 @@ class AuthController extends Controller
             $user = Auth::user();
 
             // Check if user needs to change password on first login
-            if (!$user->password_changed_at || !$user->first_login_done) {
+            if (!$user->first_login_done) {
                 return redirect()->route('auth.force-password-change');
             }
 
