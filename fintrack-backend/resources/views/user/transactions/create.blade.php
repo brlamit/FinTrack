@@ -24,6 +24,12 @@
                     <form method="POST" action="{{ route('user.transactions.store') }}">
                         @csrf
 
+                        @if($categories->isEmpty())
+                            <div class="alert alert-warning">
+                                No categories available yet. Please create at least one income or expense category before adding a transaction.
+                            </div>
+                        @endif
+
                         <div class="mb-3">
                             <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
                             <input type="text" class="form-control @error('description') is-invalid @enderror" 
@@ -34,7 +40,17 @@
                         </div>
 
                         <div class="row">
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
+                                <label for="type" class="form-label">Type <span class="text-danger">*</span></label>
+                                <select class="form-select @error('type') is-invalid @enderror" id="type" name="type" required>
+                                    <option value="income" {{ old('type', 'expense') === 'income' ? 'selected' : '' }}>Income</option>
+                                    <option value="expense" {{ old('type', 'expense') === 'expense' ? 'selected' : '' }}>Expense</option>
+                                </select>
+                                @error('type')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-4 mb-3">
                                 <label for="amount" class="form-label">Amount <span class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <span class="input-group-text">$</span>
@@ -46,12 +62,28 @@
                                 @enderror
                             </div>
 
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
                                 <label for="category_id" class="form-label">Category <span class="text-danger">*</span></label>
+                                @php
+                                    $groupedCategories = $categories->groupBy(fn ($category) => $category->type ?? 'uncategorized');
+                                    $selectedCategory = old('category_id');
+                                @endphp
                                 <select class="form-select @error('category_id') is-invalid @enderror" 
-                                        id="category_id" name="category_id" required>
+                                        id="category_id" name="category_id" {{ $categories->isEmpty() ? 'disabled' : '' }} required>
                                     <option value="">Select a category</option>
-                                    <!-- Categories will be loaded from database -->
+                                    @forelse($groupedCategories as $type => $typeCategories)
+                                        <optgroup label="{{ ucfirst($type) }}">
+                                            @foreach($typeCategories as $category)
+                                                <option value="{{ $category->id }}"
+                                                    data-type="{{ $category->type ?? 'uncategorized' }}"
+                                                    @selected($selectedCategory == $category->id)>
+                                                    {{ $category->name }}
+                                                </option>
+                                            @endforeach
+                                        </optgroup>
+                                    @empty
+                                        <option value="" disabled>No categories available</option>
+                                    @endforelse
                                 </select>
                                 @error('category_id')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -71,7 +103,7 @@
                         <hr>
 
                         <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary">
+                            <button type="submit" class="btn btn-primary" {{ $categories->isEmpty() ? 'disabled' : '' }}>
                                 <i class="fas fa-save"></i> Add Transaction
                             </button>
                             <a href="{{ route('user.transactions') }}" class="btn btn-outline-secondary">
@@ -85,3 +117,46 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+    <script>
+        window.addEventListener('DOMContentLoaded', function () {
+            const typeSelect = document.getElementById('type');
+            const categorySelect = document.getElementById('category_id');
+
+            if (!typeSelect || !categorySelect) {
+                return;
+            }
+
+            const defaultOption = categorySelect.querySelector('option[value=""]');
+            const categoryOptions = Array.from(categorySelect.querySelectorAll('option[data-type]'));
+
+            const syncCategoryOptions = () => {
+                const selectedType = typeSelect.value;
+                let hasVisibleOption = false;
+
+                categoryOptions.forEach(option => {
+                    const optionType = option.dataset.type || 'uncategorized';
+                    const shouldShow = optionType === selectedType || optionType === 'uncategorized';
+                    option.hidden = !shouldShow;
+                    option.disabled = !shouldShow;
+                    if (shouldShow && option.value === categorySelect.value) {
+                        hasVisibleOption = true;
+                    }
+                });
+
+                if (!hasVisibleOption) {
+                    categorySelect.value = '';
+                }
+
+                if (defaultOption) {
+                    defaultOption.hidden = false;
+                    defaultOption.disabled = false;
+                }
+            };
+
+            typeSelect.addEventListener('change', syncCategoryOptions);
+            syncCategoryOptions();
+        });
+    </script>
+@endpush
