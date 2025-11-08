@@ -57,6 +57,42 @@
                 </table>
             </div>
         </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Transactions</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>User</th>
+                                <th>Category</th>
+                                <th>Amount</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($group->sharedTransactions as $transaction)
+                                <tr>
+                                    <td>{{ $transaction->description ?? '—' }}</td>
+                                    <td>{{ $transaction->user->name ?? '—' }}</td>
+                                    <td>{{ $transaction->category->name ?? '—' }}</td>
+                                    <td>${{ number_format($transaction->amount, 2) }}</td>
+                                    <td>{{ optional($transaction->transaction_date)->format('Y-m-d') ?? $transaction->created_at->format('Y-m-d') }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">No transactions recorded for this group.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
     <div class="col-md-4">
         <div class="card">

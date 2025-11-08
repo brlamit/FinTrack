@@ -106,7 +106,7 @@
                                         @endif
                                     </td>
                                     <td><strong>${{ number_format($transaction->amount, 2) }}</strong></td>
-                                    <td>{{ $transaction->date->format('M d, Y') }}</td>
+                                   <td>{{ $transaction->created_at->format('M d, Y H:i') }}</td>
                                 </tr>
                             @empty
                                 <tr>

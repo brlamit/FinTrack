@@ -50,6 +50,14 @@ class Transaction extends Model
     }
 
     /**
+     * Get the group associated with the transaction.
+     */
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(Group::class);
+    }
+
+    /**
      * Get the receipt for the transaction.
      */
     public function receipt(): BelongsTo

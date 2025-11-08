@@ -43,7 +43,7 @@ class AdminController extends Controller
 
     public function transactions(Request $request)
     {
-        $query = Transaction::with(['user', 'category']);
+    $query = Transaction::with(['user', 'category', 'group']);
 
         if ($request->has('user_id')) {
             $query->where('user_id', $request->user_id);
@@ -51,6 +51,10 @@ class AdminController extends Controller
 
         if ($request->has('type')) {
             $query->where('type', $request->type);
+        }
+
+        if ($request->filled('group_id')) {
+            $query->where('group_id', $request->group_id);
         }
 
         if ($request->has('date_from')) {
@@ -62,8 +66,9 @@ class AdminController extends Controller
         }
 
         $transactions = $query->paginate(20);
+        $groups = Group::orderBy('name')->get(['id', 'name']);
 
-        return view('admin.transactions.index', compact('transactions'));
+        return view('admin.transactions.index', compact('transactions', 'groups'));
     }
 
     public function impersonate(User $user)

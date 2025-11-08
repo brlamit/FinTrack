@@ -111,6 +111,8 @@ Route::middleware(['auth'])->group(function () {
     // User groups
     Route::get('/groups', [UserController::class, 'groups'])->name('user.groups');
     Route::get('/groups/{group}', [UserController::class, 'group'])->name('user.group');
+    Route::post('/groups', [\App\Http\Controllers\GroupController::class, 'store'])->name('user.groups.store');
+    Route::delete('/groups/{group}', [\App\Http\Controllers\GroupController::class, 'destroy'])->name('user.groups.destroy');
     // Add expense (split) from web form
     Route::post('groups/{group}/split', [\App\Http\Controllers\GroupController::class, 'splitExpense'])->name('groups.split');
 

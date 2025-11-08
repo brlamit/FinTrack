@@ -33,7 +33,7 @@ class GroupController extends Controller
     /**
      * Store a newly created group.
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
@@ -43,11 +43,15 @@ class GroupController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-            ], 422);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            return back()->withErrors($validator)->withInput();
         }
 
         $group = Group::create([
@@ -67,11 +71,16 @@ class GroupController extends Controller
             'joined_at' => now(),
         ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Group created successfully',
-            'data' => $group->load(['owner', 'members']),
-        ], 201);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Group created successfully',
+                'data' => $group->load(['owner', 'members']),
+            ], 201);
+        }
+
+        return redirect()->route('user.group', $group)
+            ->with('success', 'Group created successfully!');
     }
 
     /**
@@ -132,22 +141,30 @@ class GroupController extends Controller
     /**
      * Remove the specified group.
      */
-    public function destroy(Group $group): JsonResponse
+    public function destroy(Request $request, Group $group)
     {
         // Check if user is owner of the group
         if ($group->owner_id !== auth()->id()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized',
-            ], 403);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized',
+                ], 403);
+            }
+
+            return redirect()->back()->withErrors(['error' => 'You are not allowed to delete this group.']);
         }
 
         $group->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Group deleted successfully',
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Group deleted successfully',
+            ]);
+        }
+
+        return redirect()->route('user.groups')->with('success', 'Group deleted successfully.');
     }
 
     /**

@@ -8,7 +8,7 @@
 </div>
 
 <form method="GET" class="mb-4">
-    <div class="row">
+    <div class="row g-2">
         <div class="col-md-3">
             <select name="type" class="form-control">
                 <option value="">All Types</option>
@@ -17,13 +17,23 @@
             </select>
         </div>
         <div class="col-md-3">
+            <select name="group_id" class="form-control">
+                <option value="">All Groups</option>
+                @foreach($groups as $group)
+                    <option value="{{ $group->id }}" {{ (string)request('group_id') === (string)$group->id ? 'selected' : '' }}>
+                        {{ $group->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        <div class="col-md-2">
             <input type="date" name="date_from" class="form-control" value="{{ request('date_from') }}">
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
             <input type="date" name="date_to" class="form-control" value="{{ request('date_to') }}">
         </div>
-        <div class="col-md-3">
-            <button type="submit" class="btn btn-primary">Filter</button>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100">Filter</button>
         </div>
     </div>
 </form>
@@ -35,6 +45,7 @@
                 <th>ID</th>
                 <th>User</th>
                 <th>Type</th>
+                <th>Group</th>
                 <th>Amount</th>
                 <th>Category</th>
                 <th>Description</th>
@@ -51,6 +62,7 @@
                         {{ ucfirst($transaction->type) }}
                     </span>
                 </td>
+                <td>{{ $transaction->group?->name ?? '—' }}</td>
                 <td>${{ number_format($transaction->amount, 2) }}</td>
                 <td>{{ $transaction->category->name ?? 'N/A' }}</td>
                 <td>{{ $transaction->description }}</td>

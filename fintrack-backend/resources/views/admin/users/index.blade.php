@@ -45,7 +45,7 @@
                         {{ ucfirst($user->status) }}
                     </span>
                 </td>
-                <td>{{ $user->created_at->format('M d, Y') }}</td>
+               {{-- <td>{{ $user->created_at->format('M d, Y H:i') }}</td> --}}
                 <td>
                     <form method="POST" action="{{ route('admin.impersonate', $user) }}" style="display: inline;">
                         @csrf

@@ -4,6 +4,24 @@
 
 @section('content')
 <div class="container-fluid py-4">
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    @if($errors->any())
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <ul class="mb-0">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
     <a href="{{ route('user.groups') }}" class="btn btn-outline-secondary mb-3">
         <i class="fas fa-arrow-left"></i> Back to Groups
     </a>
@@ -130,6 +148,9 @@
                     <h6 class="mb-0"><i class="fas fa-users"></i> Members ({{ $group->members->count() }})</h6>
                 </div>
                 <div class="list-group list-group-flush">
+                    @php
+                        $currentMember = $group->members->firstWhere('user_id', auth()->id());
+                    @endphp
                     @foreach($group->members as $member)
                         <div class="list-group-item">
                             <div class="d-flex align-items-center justify-content-between">
@@ -139,10 +160,7 @@
                                 </div>
                                 <div>
                                     <span class="badge bg-secondary me-2">{{ ucfirst($member->role) }}</span>
-                                    @php
-                                        $userMember = $group->members()->where('user_id', auth()->id())->first();
-                                    @endphp
-                                    @if($userMember && $userMember->role === 'admin' && $member->user_id !== $group->owner_id && $member->user_id !== auth()->id())
+                                    @if($currentMember && $currentMember->role === 'admin' && $member->user_id !== $group->owner_id && $member->user_id !== auth()->id())
                                         <button class="btn btn-sm btn-danger remove-member-btn" 
                                                 data-group-id="{{ $group->id }}" 
                                                 data-member-id="{{ $member->id }}"
@@ -156,6 +174,43 @@
                     @endforeach
                 </div>
             </div>
+            @if($currentMember && $currentMember->role === 'admin')
+                <div class="card mt-4">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0">Invite Member</h6>
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ route('groups.invite', $group) }}" method="POST">
+                            @csrf
+                            <div class="mb-3">
+                                <label class="form-label">Full Name <span class="text-danger">*</span></label>
+                                <input type="text" name="name" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Email <span class="text-danger">*</span></label>
+                                <input type="email" name="email" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Phone</label>
+                                <input type="text" name="phone" class="form-control">
+                            </div>
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="fas fa-user-plus"></i> Send Invite
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                @if($group->owner_id === auth()->id())
+                    <form action="{{ route('user.groups.destroy', $group) }}" method="POST" class="mt-4" onsubmit="return confirm('Delete this group? This action cannot be undone.');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-outline-danger w-100">
+                            <i class="fas fa-trash-alt"></i> Delete Group
+                        </button>
+                    </form>
+                @endif
+            @endif
         </div>
     </div>
 </div>

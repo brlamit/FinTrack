@@ -65,7 +65,13 @@ class AdminGroupController extends Controller
      */
     public function show(Group $group)
     {
-        $group->load(['owner', 'members.user']);
+        $group->load([
+            'owner',
+            'members.user',
+            'sharedTransactions' => function ($query) {
+                $query->with('user', 'category')->orderByDesc('transaction_date');
+            },
+        ]);
 
         return view('admin.groups.show', compact('group'));
     }

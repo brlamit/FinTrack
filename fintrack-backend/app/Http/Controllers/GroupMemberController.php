@@ -23,10 +23,14 @@ class GroupMemberController extends Controller
         // Check if user is admin of the group
         $member = $group->members()->where('user_id', auth()->id())->first();
         if (!$member || $member->role !== 'admin') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized',
-            ], 403);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized',
+                ], 403);
+            }
+
+            return redirect()->back()->withErrors(['error' => 'You are not authorized to perform this action.']);
         }
 
         $validator = Validator::make($request->all(), [
@@ -36,11 +40,15 @@ class GroupMemberController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-            ], 422);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            return redirect()->back()->withErrors($validator)->withInput();
         }
 
         // Check if user already exists
@@ -50,10 +58,14 @@ class GroupMemberController extends Controller
             // Check if user is already a member of the group
             $existingMember = $group->members()->where('user_id', $user->id)->first();
             if ($existingMember) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'This user is already a member of the group',
-                ], 422);
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'This user is already a member of the group',
+                    ], 422);
+                }
+
+                return redirect()->back()->withErrors(['error' => 'This user is already a member of the group.'])->withInput();
             }
 
             // Add existing user to group
