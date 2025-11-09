@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('layouts.user')
 
 @section('title', 'My Profile')
 
@@ -108,15 +108,41 @@
                             </thead>
                             <tbody>
                                 @forelse($recentTransactions ?? [] as $transaction)
+                                    @php
+                                        $tx = is_array($transaction) ? (object) $transaction : $transaction;
+                                        $transactionDescription = $tx->description ?? '—';
+
+                                        $transactionCategory = null;
+                                        if (isset($tx->category) && is_object($tx->category)) {
+                                            $transactionCategory = $tx->category->name ?? null;
+                                        } elseif (!empty($tx->category_name)) {
+                                            $transactionCategory = $tx->category_name;
+                                        }
+
+                                        $transactionAmount = (float) ($tx->amount ?? 0);
+
+                                        $rawDate = $tx->date ?? ($tx->transaction_date ?? null);
+                                        if ($rawDate instanceof \Carbon\CarbonInterface) {
+                                            $transactionDate = $rawDate->format('M d, Y');
+                                        } elseif ($rawDate) {
+                                            try {
+                                                $transactionDate = \Illuminate\Support\Carbon::parse($rawDate)->format('M d, Y');
+                                            } catch (\Exception $e) {
+                                                $transactionDate = (string) $rawDate;
+                                            }
+                                        } else {
+                                            $transactionDate = '—';
+                                        }
+                                    @endphp
                                     <tr>
-                                        <td>{{ $transaction->description }}</td>
+                                        <td>{{ $transactionDescription }}</td>
                                         <td>
-                                            @if($transaction->category)
-                                                <span class="badge bg-secondary">{{ $transaction->category->name }}</span>
+                                            @if($transactionCategory)
+                                                <span class="badge bg-secondary">{{ $transactionCategory }}</span>
                                             @endif
                                         </td>
-                                        <td class="fw-semibold">${{ number_format($transaction->amount, 2) }}</td>
-                                        <td>{{ $transaction->date->format('M d, Y') }}</td>
+                                        <td class="fw-semibold">${{ number_format($transactionAmount, 2) }}</td>
+                                        <td>{{ $transactionDate }}</td>
                                     </tr>
                                 @empty
                                     <tr>
@@ -137,18 +163,27 @@
                 <div class="card-body">
                     <div class="row">
                         @forelse($userGroups ?? [] as $group)
+                            @php
+                                $groupInstance = is_array($group) ? (object) $group : $group;
+                                $groupName = $groupInstance->name ?? 'Unnamed Group';
+                                $rawMembers = $groupInstance->members ?? [];
+                                $membersCollection = $rawMembers instanceof \Illuminate\Support\Collection ? $rawMembers : collect($rawMembers);
+                                $memberCount = $membersCollection->count();
+                                $groupDescription = $groupInstance->description ?? null;
+                                $groupId = $groupInstance->id ?? null;
+                            @endphp
                             <div class="col-md-6 mb-3">
                                 <div class="card border-left-primary">
                                     <div class="card-body">
-                                        <h6 class="font-weight-bold text-primary">{{ $group->name }}</h6>
+                                        <h6 class="font-weight-bold text-primary">{{ $groupName }}</h6>
                                         <p class="text-sm text-muted mb-2">
                                             <i class="fas fa-users"></i> 
-                                            {{ $group->members->count() }} members
+                                            {{ $memberCount }} members
                                         </p>
-                                        @if($group->description)
-                                            <p class="text-sm">{{ Str::limit($group->description, 50) }}</p>
+                                        @if($groupDescription)
+                                            <p class="text-sm">{{ \Illuminate\Support\Str::limit($groupDescription, 50) }}</p>
                                         @endif
-                                        <a href="{{ route('user.group', $group) }}" class="btn btn-sm btn-outline-primary">
+                                        <a href="{{ $groupId ? route('user.group', $groupId) : '#' }}" class="btn btn-sm btn-outline-primary">
                                             View Group
                                         </a>
                                     </div>
