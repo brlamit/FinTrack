@@ -250,8 +250,7 @@ class GroupController extends Controller
      */
     public function splitExpense(Request $request, Group $group)
     {
-        // Check if user is member of the group
-        if (!$group->members()->where('user_id', auth()->id())->exists()) {
+        if (! $group->members()->where('user_id', auth()->id())->exists()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Group not found',
@@ -259,27 +258,45 @@ class GroupController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
+            'type' => 'required|in:income,expense',
             'amount' => 'required|numeric|min:0.01',
-            'description' => 'required_without:category_id|string|max:255',
+            'description' => 'nullable|string|max:255',
             'category_id' => 'nullable|exists:categories,id',
-            'split_type' => 'required|in:equal,percentage,custom',
-            'splits' => 'required_if:split_type,custom|array',
+            'split_type' => 'required|in:equal,custom,percentage',
+            'splits' => 'required|array|min:1',
             'splits.*.user_id' => 'required|exists:users,id',
-            'splits.*.amount' => 'required|numeric|min:0',
+            'splits.*.amount' => 'nullable|numeric|min:0',
+            'splits.*.percent' => 'nullable|numeric|min:0|max:100',
             'receipt' => 'nullable|file|image|max:5120',
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-            ], 422);
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        // Implement expense splitting logic: create a receipt (if provided) and create transactions
+        $members = $group->members()->with('user')->get();
+        $memberIds = $members->pluck('user_id')->all();
+
+        $handleError = function (string $message) use ($request) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $message,
+                ], 422);
+            }
+
+            return redirect()->back()->withErrors(['split' => $message])->withInput();
+        };
+
         try {
-            // handle receipt upload if present
             $receiptId = null;
             if ($request->hasFile('receipt')) {
                 $file = $request->file('receipt');
@@ -298,111 +315,150 @@ class GroupController extends Controller
                 $receiptId = $receipt->id;
             }
 
-            // Determine category: if none provided, use or create a system 'Other Expense' category
-            $categoryId = $request->category_id;
-            if (!$categoryId) {
-                $other = \App\Models\Category::where('name', 'Other Expense')->where('type', 'expense')->first();
-                if (!$other) {
-                    // create a system category (user_id null)
-                    $other = \App\Models\Category::create([
-                        'name' => 'Other Expense',
-                        'icon' => '📦',
-                        'color' => '#9E9E9E',
-                        'type' => 'expense',
-                        'user_id' => null,
-                    ]);
+            $type = $request->input('type', 'expense');
+            $categoryId = $request->input('category_id');
+
+            if (! $categoryId) {
+                if ($type === 'income') {
+                    $other = \App\Models\Category::firstOrCreate(
+                        ['user_id' => null, 'name' => 'Other Income', 'type' => 'income'],
+                        ['icon' => '💰', 'color' => '#38B2AC']
+                    );
+                } else {
+                    $other = \App\Models\Category::firstOrCreate(
+                        ['user_id' => null, 'name' => 'Other Expense', 'type' => 'expense'],
+                        ['icon' => '📦', 'color' => '#9E9E9E']
+                    );
                 }
                 $categoryId = $other->id;
             }
 
-            // Build splits list depending on split_type
-            $splits = [];
-            if ($request->split_type === 'equal') {
-                $members = $group->members()->with('user')->get();
-                $count = $members->count() ?: 1;
-                $per = round($request->amount / $count, 2);
-                foreach ($members as $m) {
-                    $splits[] = [
-                        'user_id' => $m->user_id,
-                        'amount' => $per,
+            $splitType = $request->input('split_type');
+            $amount = (float) $request->input('amount');
+            $rawSplits = $request->input('splits', []);
+            $computedSplits = [];
+
+            $ensureMember = function ($userId) use ($memberIds, $handleError) {
+                if (! in_array($userId, $memberIds, true)) {
+                    throw new \RuntimeException('Invalid member included in split.');
+                }
+            };
+
+            if ($splitType === 'equal') {
+                $count = max($members->count(), 1);
+                $base = round($amount / $count, 2);
+                $runningTotal = 0.0;
+
+                foreach ($members as $index => $member) {
+                    $portion = $index === $count - 1
+                        ? round($amount - $runningTotal, 2)
+                        : $base;
+
+                    $runningTotal += $portion;
+                    $computedSplits[] = [
+                        'user_id' => $member->user_id,
+                        'amount' => max($portion, 0),
                     ];
                 }
-                // Adjust last member for rounding differences
-                $totalAssigned = array_sum(array_column($splits, 'amount'));
-                if (abs($totalAssigned - $request->amount) > 0.001) {
-                    $diff = $request->amount - $totalAssigned;
-                    $splits[count($splits) - 1]['amount'] += $diff;
-                }
-            } elseif ($request->split_type === 'percentage') {
-                // Expecting splits with percentage values (not yet implemented fully)
-                foreach ($request->input('splits', []) as $s) {
-                    // If incoming split has 'percent', convert to amount
-                    if (isset($s['percent'])) {
-                        $amt = round(($s['percent'] / 100) * $request->amount, 2);
-                        $splits[] = ['user_id' => $s['user_id'], 'amount' => $amt];
-                    } else {
-                        $splits[] = $s;
+            } elseif ($splitType === 'percentage') {
+                $percentTotal = 0.0;
+                foreach ($rawSplits as $index => $split) {
+                    $userId = (int) ($split['user_id'] ?? 0);
+                    $ensureMember($userId);
+
+                    if (! isset($split['percent'])) {
+                        throw new \RuntimeException('Percentage value missing for one of the members.');
                     }
+
+                    $percent = (float) $split['percent'];
+                    $percentTotal += $percent;
+                    $computedSplits[] = [
+                        'user_id' => $userId,
+                        'amount' => round(($percent / 100) * $amount, 2),
+                        'percent' => $percent,
+                    ];
+                }
+
+                if ($percentTotal <= 0 || abs($percentTotal - 100) > 0.01) {
+                    throw new \RuntimeException('Percentage splits must add up to 100%.');
+                }
+
+                $assigned = array_sum(array_column($computedSplits, 'amount'));
+                if (abs($assigned - $amount) > 0.01 && count($computedSplits) > 0) {
+                    $diff = round($amount - $assigned, 2);
+                    $computedSplits[count($computedSplits) - 1]['amount'] += $diff;
                 }
             } else {
-                // custom
-                $splits = $request->input('splits', []);
-            }
+                $customSplits = [];
+                foreach ($rawSplits as $split) {
+                    $userId = (int) ($split['user_id'] ?? 0);
+                    $ensureMember($userId);
 
-            // Validate that splits sum equals amount (tolerate tiny float rounding)
-            $sum = 0;
-            foreach ($splits as $s) {
-                $sum += (float) ($s['amount'] ?? 0);
-            }
-            if (abs($sum - (float) $request->amount) > 0.01) {
-                if ($request->wantsJson()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Split amounts do not sum to total amount',
-                    ], 422);
+                    if (! isset($split['amount'])) {
+                        throw new \RuntimeException('Amount missing for one of the members.');
+                    }
+
+                    $customSplits[] = [
+                        'user_id' => $userId,
+                        'amount' => round((float) $split['amount'], 2),
+                    ];
                 }
-                return redirect()->back()->with('error', 'Split amounts do not sum to total amount');
+
+                $assigned = array_sum(array_column($customSplits, 'amount'));
+                if (abs($assigned - $amount) > 0.01) {
+                    throw new \RuntimeException('Custom split amounts must add up to the total.');
+                }
+
+                $computedSplits = $customSplits;
             }
 
-            // Create transactions per split (attach to group)
-            foreach ($splits as $split) {
-                $userId = $split['user_id'];
-                $amt = $split['amount'];
+            if (empty($computedSplits)) {
+                return $handleError('No split data provided.');
+            }
+
+            foreach ($computedSplits as $split) {
                 \App\Models\Transaction::create([
-                    'user_id' => $userId,
+                    'user_id' => $split['user_id'],
                     'group_id' => $group->id,
-                    'category_id' => $categoryId ?? 1,
-                    'amount' => $amt,
-                    'description' => $request->description,
+                    'category_id' => $categoryId,
+                    'amount' => $split['amount'],
+                    'description' => $request->input('description'),
                     'transaction_date' => now()->toDateString(),
-                    'type' => 'expense',
+                    'type' => $type,
                     'receipt_id' => $receiptId,
                 ]);
             }
 
-            // Deduct from group budget if set
-            if (!is_null($group->budget_limit)) {
-                $group->budget_limit = max(0, round($group->budget_limit - (float) $request->amount, 2));
+            if ($type === 'expense' && ! is_null($group->budget_limit)) {
+                $group->budget_limit = max(0, round($group->budget_limit - $amount, 2));
                 $group->save();
             }
+
+            $message = $type === 'income'
+                ? 'Income recorded and split successfully'
+                : 'Expense recorded and split successfully';
 
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Expense split created successfully',
+                    'message' => $message,
                 ]);
             }
 
-            return redirect()->back()->with('success', 'Expense added and split successfully');
+            return redirect()->back()->with('success', $message);
+        } catch (\RuntimeException $validationException) {
+            return $handleError($validationException->getMessage());
         } catch (\Exception $e) {
-            \Log::error('Failed to create split expense: ' . $e->getMessage());
+            \Log::error('Failed to create group transaction split: ' . $e->getMessage());
+
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to create split expense',
+                    'message' => 'Failed to create split transaction',
                 ], 500);
             }
-            return redirect()->back()->with('error', 'Failed to create split expense');
+
+            return redirect()->back()->with('error', 'Failed to create split transaction');
         }
     }
 }

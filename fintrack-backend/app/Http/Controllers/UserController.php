@@ -848,14 +848,68 @@ class UserController extends Controller
      */
     public function group(Group $group)
     {
-        // Check if user is member of group
-        if (!$group->members()->where('user_id', auth()->id())->exists()) {
+        $userId = auth()->id();
+
+        if (! $group->members()->where('user_id', $userId)->exists()) {
             abort(403, 'Unauthorized');
         }
 
-    $group->load(['members.user', 'owner', 'sharedTransactions.user']);
+        $group->load([
+            'owner',
+            'members.user',
+            'sharedTransactions' => function ($query) {
+                $query->with('user', 'category')
+                    ->orderByDesc(DB::raw('COALESCE(transaction_date, created_at)'));
+            },
+        ]);
 
-        return view('user.groups.show', compact('group'));
+        $incomeTotal = (float) $group->sharedTransactions()
+            ->where('type', 'income')
+            ->sum('amount');
+
+        $expenseTotal = (float) $group->sharedTransactions()
+            ->where('type', 'expense')
+            ->sum('amount');
+
+        $transactionCount = $group->sharedTransactions()->count();
+        $lastActivity = $group->sharedTransactions()
+            ->orderByDesc(DB::raw('COALESCE(transaction_date, created_at)'))
+            ->first();
+
+        $totalFlow = $incomeTotal + $expenseTotal;
+
+        $groupTotals = [
+            'income' => $incomeTotal,
+            'expense' => $expenseTotal,
+            'net' => $incomeTotal - $expenseTotal,
+        ];
+
+        $transactionMetrics = [
+            'count' => $transactionCount,
+            'average' => $transactionCount > 0 ? $totalFlow / $transactionCount : 0,
+            'last_activity' => $lastActivity ? ($lastActivity->transaction_date ?? $lastActivity->created_at) : null,
+        ];
+
+        $memberStats = $group->sharedTransactions()
+            ->select(
+                'user_id',
+                DB::raw("SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income_total"),
+                DB::raw("SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense_total"),
+                DB::raw('COUNT(*) as transactions_count')
+            )
+            ->whereNotNull('user_id')
+            ->groupBy('user_id')
+            ->with('user:id,name,email')
+            ->orderByDesc('transactions_count')
+            ->get()
+            ->keyBy('user_id');
+
+        return view('user.groups.show', [
+            'group' => $group,
+            'groupTotals' => $groupTotals,
+            'transactionMetrics' => $transactionMetrics,
+            'memberStats' => $memberStats,
+        ]);
     }
 
     /**
