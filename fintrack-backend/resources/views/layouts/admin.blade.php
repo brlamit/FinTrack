@@ -67,11 +67,40 @@
 
     <div class="container mt-4">
         @if(session('success'))
-            <div class="alert alert-success">{{ session('success') }}</div>
+            <div class="alert alert-success alert-dismissible fade show auto-dismiss" role="alert"></div>
+                {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
         @endif
         @if(session('error'))
-            <div class="alert alert-danger">{{ session('error') }}</div>
+            <div class="alert alert-danger alert-dismissible fade show auto-dismiss" role="alert">
+                {{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
         @endif
+        @if(session('warning'))
+            <div class="alert alert-warning alert-dismissible fade show auto-dismiss" role="alert">
+                {{ session('warning') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+        @if(session('info'))
+            <div class="alert alert-info alert-dismissible fade show auto-dismiss" role="alert">
+                {{ session('info') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+
+        <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.auto-dismiss').forEach(function (el) {
+                setTimeout(function () {
+                    el.classList.remove('show');
+                    setTimeout(function () { el.remove(); }, 200);
+                }, 7000);
+            });
+        });
+        </script>
 
         @yield('content')
     </div>
