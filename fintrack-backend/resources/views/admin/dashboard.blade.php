@@ -547,10 +547,21 @@
             </div>
             <div class="callout-banner mt-4">
                 <h6 class="text-uppercase text-primary fw-semibold mb-2">Optimize Engagement</h6>
-                <p class="text-muted mb-3">Encourage groups below 50% of the leader's spend to submit new shared transactions this week.</p>
-                <a class="btn btn-sm btn-primary rounded-pill px-4" href="{{ route('admin.groups.index') }}">
-                    <i class="fas fa-paper-plane me-2"></i>Send reminders
-                </a>
+                <p class="text-muted mb-3">Encourage underperforming groups and nudge individuals who haven’t logged a transaction recently.</p>
+                <div class="d-flex flex-wrap gap-2">
+                    <form method="POST" action="{{ route('admin.groups.send-engagement-reminders') }}">
+                        @csrf
+                        <button type="submit" class="btn btn-sm btn-primary rounded-pill px-4">
+                            <i class="fas fa-people-group me-2"></i>Group reminders
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ route('admin.engagement.send-personal-reminders') }}">
+                        @csrf
+                        <button type="submit" class="btn btn-sm btn-outline-primary rounded-pill px-4">
+                            <i class="fas fa-user-clock me-2"></i>Personal nudges
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>

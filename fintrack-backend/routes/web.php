@@ -80,6 +80,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('/impersonate/{user}', [AdminController::class, 'impersonate'])->name('impersonate');
 
     // Groups
+    Route::post('groups/send-engagement-reminders', [AdminGroupController::class, 'sendEngagementReminders'])
+        ->name('groups.send-engagement-reminders');
+    Route::post('engagement/send-personal-reminders', [AdminGroupController::class, 'sendPersonalEngagementReminders'])
+        ->name('engagement.send-personal-reminders');
     Route::resource('groups', AdminGroupController::class);
     Route::delete('groups/{group}/members/{member}', [\App\Http\Controllers\GroupMemberController::class, 'remove'])->name('groups.member.remove');
 });
