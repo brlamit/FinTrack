@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
 use App\Models\UserOtp;
 
@@ -26,6 +27,8 @@ class User extends Authenticatable
         'username',
         'password',
         'phone',
+        'avatar',
+        'avatar_disk',
         'role',
         'invited_by',
         'invited_at',
@@ -33,6 +36,52 @@ class User extends Authenticatable
         'password_changed_at',
         'first_login_done',
     ];
+
+    /**
+     * Return a public URL for the avatar when one is set.
+     */
+    public function getAvatarAttribute($value)
+    {
+        if (!$value) {
+            return null;
+        }
+
+        // If the stored value already looks like a URL, return as-is
+        if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+            return $value;
+        }
+        // Determine which disk the avatar is stored on. Prefer the explicitly
+        // stored avatar_disk (raw) if present; otherwise use AVATAR_DISK env.
+        $disk = $this->getRawOriginal('avatar_disk') ?: env('AVATAR_DISK', 'public');
+
+        // If the file exists locally (storage/app/public/...), prefer serving
+        // it from the local public disk so the frontend shows the image even
+        // if a previous attempt to upload to Supabase failed.
+        $localPath = storage_path('app/public/' . ltrim($value, '/'));
+        if (file_exists($localPath)) {
+            try {
+                return Storage::disk('public')->url($value);
+            } catch (\Throwable $e) {
+                // ignore and continue to attempt other disks
+            }
+        }
+
+        // Special case for Supabase: if SUPABASE_PUBLIC_URL is provided we can
+        // build a direct public URL (useful when bucket objects are public).
+        if ($disk === 'supabase' && env('SUPABASE_PUBLIC_URL')) {
+            return rtrim(env('SUPABASE_PUBLIC_URL'), '/') . '/' . ltrim($value, '/');
+        }
+
+        try {
+            return Storage::disk($disk)->url($value);
+        } catch (\Throwable $e) {
+            try {
+                return Storage::disk('public')->url($value);
+            } catch (\Throwable $e) {
+                return $value;
+            }
+        }
+    }
 
     /**
      * The attributes that should be hidden for serialization.

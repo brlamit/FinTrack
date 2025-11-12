@@ -35,8 +35,13 @@
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-user-shield"></i>
-                            <span>{{ auth()->user()->name }}</span>
+                            @php $avatarUrl = auth()->user()->avatar; @endphp
+                            @if($avatarUrl)
+                                <img id="navbar-avatar-img" src="{{ $avatarUrl }}{{ strpos($avatarUrl, '?') === false ? '?' : '&' }}v={{ auth()->user()->updated_at?->timestamp ?? time() }}" alt="{{ auth()->user()->name }}" class="rounded-circle" width="36" height="36" style="object-fit:cover;">
+                            @else
+                                <i class="fas fa-user-shield"></i>
+                            @endif
+                            <span id="navbar-username">{{ auth()->user()->name }}</span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="navbarDropdown">
                             <li>

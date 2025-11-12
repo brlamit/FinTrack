@@ -11,6 +11,7 @@ use App\Services\OtpService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Aws\S3\S3Client;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -429,6 +430,7 @@ class UserController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'username' => ['nullable', 'string', 'max:50', Rule::unique('users')->ignore($user->id)],
             'email' => ['required', 'email', Rule::unique('users')->ignore($user->id)],
             'phone' => ['nullable', 'string', 'max:20'],
             'avatar' => ['nullable', 'image', 'max:5120'], // 5MB
@@ -436,19 +438,166 @@ class UserController extends Controller
 
         // Handle avatar upload
         if ($request->hasFile('avatar')) {
+            $disk = env('AVATAR_DISK', 'public');
+
             // Delete old avatar if exists
-            if ($user->avatar) {
-                Storage::disk('public')->delete($user->avatar);
+            $old = $user->getRawOriginal('avatar');
+            $oldDisk = $user->getRawOriginal('avatar_disk') ?? $disk;
+            if ($old) {
+                try {
+                    if ($oldDisk === 'supabase') {
+                        $s3 = new S3Client([
+                            'version' => 'latest',
+                            'region' => env('SUPABASE_REGION', 'us-east-1'),
+                            'credentials' => [
+                                'key' => env('SUPABASE_KEY'),
+                                'secret' => env('SUPABASE_SECRET'),
+                            ],
+                            'endpoint' => env('SUPABASE_ENDPOINT'),
+                            'use_path_style_endpoint' => env('SUPABASE_USE_PATH_STYLE_ENDPOINT', true),
+                        ]);
+                        $bucket = env('SUPABASE_BUCKET') ?: env('SUPABASE_BUCKET_DEFAULT');
+                        if ($bucket) {
+                            $s3->deleteObject(['Bucket' => $bucket, 'Key' => ltrim($old, '/')]);
+                        }
+                    } else {
+                        Storage::disk($oldDisk)->delete($old);
+                    }
+                } catch (\Throwable $e) {
+                    // ignore deletion errors
+                }
             }
 
-            $path = $request->file('avatar')->store('avatars', 'public');
-            $validated['avatar'] = $path;
+            $file = $request->file('avatar');
+            if ($disk === 'supabase') {
+                // Upload directly with AWS SDK to Supabase
+                $s3 = new S3Client([
+                    'version' => 'latest',
+                    'region' => env('SUPABASE_REGION', 'us-east-1'),
+                    'credentials' => [
+                        'key' => env('SUPABASE_KEY'),
+                        'secret' => env('SUPABASE_SECRET'),
+                    ],
+                    'endpoint' => env('SUPABASE_ENDPOINT'),
+                    'use_path_style_endpoint' => env('SUPABASE_USE_PATH_STYLE_ENDPOINT', true),
+                ]);
+                $bucket = env('SUPABASE_BUCKET') ?: env('SUPABASE_BUCKET_DEFAULT');
+                if (!$bucket) {
+                    throw new \RuntimeException('No SUPABASE_BUCKET configured');
+                }
+
+                $ext = $file->getClientOriginalExtension() ?: 'png';
+                $key = 'avatars/' . uniqid() . '.' . $ext;
+                $stream = fopen($file->getPathname(), 'r');
+                $s3->putObject([
+                    'Bucket' => $bucket,
+                    'Key' => $key,
+                    'Body' => $stream,
+                    'ACL' => 'public-read',
+                ]);
+                if (is_resource($stream)) fclose($stream);
+
+                $validated['avatar'] = $key;
+                $validated['avatar_disk'] = $disk;
+            } else {
+                $path = $file->store('avatars', $disk);
+                $validated['avatar'] = $path;
+            }
         }
 
         $user->update($validated);
 
         return redirect()->route('user.profile')
             ->with('success', 'Profile updated successfully!');
+    }
+
+    /**
+     * Update only avatar (called from profile page when clicking avatar)
+     */
+    public function updateAvatar(Request $request)
+    {
+        $user = auth()->user();
+
+        $validated = $request->validate([
+            'avatar' => ['required', 'image', 'max:5120'], // 5MB
+        ]);
+
+        if ($request->hasFile('avatar')) {
+            $disk = env('AVATAR_DISK', 'public');
+
+            if ($user->getRawOriginal('avatar')) {
+                $old = $user->getRawOriginal('avatar');
+                $oldDisk = $user->getRawOriginal('avatar_disk') ?? $disk;
+                try {
+                    if ($oldDisk === 'supabase') {
+                        $s3 = new S3Client([
+                            'version' => 'latest',
+                            'region' => env('SUPABASE_REGION', 'us-east-1'),
+                            'credentials' => [
+                                'key' => env('SUPABASE_KEY'),
+                                'secret' => env('SUPABASE_SECRET'),
+                            ],
+                            'endpoint' => env('SUPABASE_ENDPOINT'),
+                            'use_path_style_endpoint' => env('SUPABASE_USE_PATH_STYLE_ENDPOINT', true),
+                        ]);
+                        $bucket = env('SUPABASE_BUCKET') ?: env('SUPABASE_BUCKET_DEFAULT');
+                        if ($bucket) {
+                            $s3->deleteObject(['Bucket' => $bucket, 'Key' => ltrim($old, '/')]);
+                        }
+                    } else {
+                        Storage::disk($oldDisk)->delete($old);
+                    }
+                } catch (\Throwable $e) {
+                    // ignore
+                }
+            }
+
+            $file = $request->file('avatar');
+            if ($disk === 'supabase') {
+                $s3 = new S3Client([
+                    'version' => 'latest',
+                    'region' => env('SUPABASE_REGION', 'us-east-1'),
+                    'credentials' => [
+                        'key' => env('SUPABASE_KEY'),
+                        'secret' => env('SUPABASE_SECRET'),
+                    ],
+                    'endpoint' => env('SUPABASE_ENDPOINT'),
+                    'use_path_style_endpoint' => env('SUPABASE_USE_PATH_STYLE_ENDPOINT', true),
+                ]);
+                $bucket = env('SUPABASE_BUCKET') ?: env('SUPABASE_BUCKET_DEFAULT');
+                if (!$bucket) {
+                    throw new \RuntimeException('No SUPABASE_BUCKET configured');
+                }
+
+                $ext = $file->getClientOriginalExtension() ?: 'png';
+                $key = 'avatars/' . uniqid() . '.' . $ext;
+                $stream = fopen($file->getPathname(), 'r');
+                $s3->putObject([
+                    'Bucket' => $bucket,
+                    'Key' => $key,
+                    'Body' => $stream,
+                    'ACL' => 'public-read',
+                ]);
+                if (is_resource($stream)) fclose($stream);
+
+                $user->update(['avatar' => $key, 'avatar_disk' => $disk]);
+            } else {
+                $path = $file->store('avatars', $disk);
+                $user->update(['avatar' => $path, 'avatar_disk' => $disk]);
+            }
+        }
+
+        // If requested via AJAX/fetch, return JSON with the new avatar URL so
+        // the frontend can update without a full page reload.
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'avatar' => $user->avatar,
+                'avatar_url' => $user->avatar . (strpos($user->avatar, '?') === false ? '?' : '&') . 'v=' . $user->updated_at?->timestamp,
+            ]);
+        }
+
+        return back()->with('success', 'Profile picture updated.');
     }
 
     /**

@@ -51,6 +51,16 @@
                         </div>
 
                         <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control @error('username') is-invalid @enderror"
+                                   id="username" name="username" value="{{ old('username', auth()->user()->username) }}">
+                            <div class="form-text">Optional. A short handle used in profile URLs.</div>
+                            @error('username')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="mb-3">
                             <label for="phone" class="form-label">Phone Number</label>
                             <input type="tel" class="form-control @error('phone') is-invalid @enderror" 
                                    id="phone" name="phone" value="{{ old('phone', auth()->user()->phone) }}">

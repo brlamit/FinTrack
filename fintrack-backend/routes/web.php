@@ -94,6 +94,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [UserController::class, 'dashboard'])->name('user.dashboard');
     Route::get('/profile', [UserController::class, 'profile'])->name('user.profile');
     Route::get('/profile/edit', [UserController::class, 'edit'])->name('user.edit');
+    Route::post('/profile/avatar', [UserController::class, 'updateAvatar'])->name('user.avatar.update');
     Route::put('/profile', [UserController::class, 'update'])->name('user.update');
     Route::get('/security', [UserController::class, 'security'])->name('user.security');
     Route::put('/password', [UserController::class, 'updatePassword'])->name('user.update-password');

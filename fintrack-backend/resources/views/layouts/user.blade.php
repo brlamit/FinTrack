@@ -27,8 +27,14 @@
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" id="userNavbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-user-circle fa-lg"></i>
-                            <span>{{ auth()->user()->name }}</span>
+                            @php $avatarUrl = auth()->user()->avatar; @endphp
+                            @if($avatarUrl)
+                                {{-- Append updated_at as cache-bust token to ensure newest image shows after upload --}}
+                                <img id="navbar-avatar-img" src="{{ $avatarUrl }}{{ strpos($avatarUrl, '?') === false ? '?' : '&' }}v={{ auth()->user()->updated_at?->timestamp ?? time() }}" alt="{{ auth()->user()->name }}" class="rounded-circle" width="36" height="36" style="object-fit:cover;">
+                            @else
+                                <i class="fas fa-user-circle fa-lg"></i>
+                            @endif
+                            <span id="navbar-username">{{ auth()->user()->name }}</span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userNavbarDropdown">
                             <li>
@@ -59,14 +65,36 @@
 
      <div class="container mt-4">
         @if(session('success'))
-            <div class="alert alert-success">{{ session('success') }}</div>
+            <div class="alert alert-success alert-dismissible fade show" role="alert" id="flash-success">
+                {{ session('success') }}
+            </div>
         @endif
         @if(session('error'))
-            <div class="alert alert-danger">{{ session('error') }}</div>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert" id="flash-error">
+                {{ session('error') }}
+            </div>
         @endif
 
         @yield('content')
     </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        ['flash-success', 'flash-error'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            setTimeout(function () {
+                if (window.bootstrap && bootstrap.Alert) {
+                    bootstrap.Alert.getOrCreateInstance(el).close();
+                } else {
+                    // fallback: hide element
+                    el.classList.remove('show');
+                    el.style.display = 'none';
+                }
+            }, 7000);
+        });
+    });
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

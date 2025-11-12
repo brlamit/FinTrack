@@ -60,6 +60,39 @@ return [
             'report' => false,
         ],
 
+        // Supabase (S3-compatible) disk. Fill these ENV values in your .env file if you want
+        // to store uploads in a Supabase bucket.
+        'supabase' => [
+    'driver' => 's3',
+    'key' => env('SUPABASE_SERVICE_KEY'),
+    'secret' => env('SUPABASE_SERVICE_KEY'),
+    'region' => 'us-east-1',
+    'bucket' => env('SUPABASE_BUCKET_DEFAULT', 'avatars'),
+    'endpoint' => env('SUPABASE_ENDPOINT'),
+    'use_path_style_endpoint' => true,
+],
+
+'supabase_avatars' => [
+    'driver' => 's3',
+    'key' => env('SUPABASE_SERVICE_KEY'),
+    'secret' => env('SUPABASE_SERVICE_KEY'),
+    'region' => 'us-east-1',
+    'bucket' => env('SUPABASE_BUCKET_AVATARS', 'avatars'),
+    'endpoint' => env('SUPABASE_ENDPOINT'),
+    'use_path_style_endpoint' => true,
+],
+
+'supabase_documents' => [
+    'driver' => 's3',
+    'key' => env('SUPABASE_SERVICE_KEY'),
+    'secret' => env('SUPABASE_SERVICE_KEY'),
+    'region' => 'us-east-1',
+    'bucket' => env('SUPABASE_BUCKET_DOCUMENTS', 'documents'),
+    'endpoint' => env('SUPABASE_ENDPOINT'),
+    'use_path_style_endpoint' => true,
+],
+
+
     ],
 
     /*

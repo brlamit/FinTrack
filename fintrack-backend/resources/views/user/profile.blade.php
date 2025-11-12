@@ -14,16 +14,30 @@
                 <div class="card-body">
                     <div class="text-center mb-4">
                         <div class="mb-3">
-                            @if(auth()->user()->avatar)
-                                <img src="{{ auth()->user()->avatar }}" alt="{{ auth()->user()->name }}" class="rounded-circle" width="100" height="100">
-                            @else
-                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 100px; height: 100px; margin: 0 auto;">
-                                    <span style="font-size: 48px;">{{ substr(auth()->user()->name, 0, 1) }}</span>
-                                </div>
-                            @endif
+                            {{-- Avatar upload form: clicking the picture opens file picker and auto-submits --}}
+                            <form id="avatar-form" action="{{ route('user.avatar.update') }}" method="POST" enctype="multipart/form-data" class="d-inline">
+                                @csrf
+                                <input type="file" id="avatar-input" name="avatar" accept="image/*" class="d-none">
+                                <label for="avatar-input" style="cursor: pointer; display: inline-block; position: relative; width:100px; height:100px;">
+                                    @php $avatarUrl = auth()->user()->avatar; @endphp
+                                    @if($avatarUrl)
+                                        {{-- Use the accessor URL directly (may be a full Supabase URL). Append cache-bust token. --}}
+                                        <img id="profile-avatar-img" src="{{ $avatarUrl }}{{ strpos($avatarUrl, '?') === false ? '?' : '&' }}v={{ auth()->user()->updated_at?->timestamp ?? time() }}" alt="{{ auth()->user()->name }}" class="rounded-circle" width="100" height="100" style="object-fit:cover; display:block;">
+                                    @else
+                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 100px; height: 100px; margin: 0 auto;">
+                                            <span style="font-size: 48px;">{{ substr(auth()->user()->name, 0, 1) }}</span>
+                                        </div>
+                                    @endif
+                                    <div id="avatar-spinner" style="position:absolute; inset:0; display:none; align-items:center; justify-content:center;">
+                                        <div class="spinner-border text-light" role="status" style="width:2rem; height:2rem;">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                    </div>
+                                </label>
+                            </form>
                         </div>
                         <h5>{{ auth()->user()->name }}</h5>
-                        <p class="text-muted">@{{ auth()->user()->username }}</p>
+                        <p class="text-muted">{{ auth()->user()->username }}</p>
                     </div>
 
                     <div class="mb-3">
@@ -201,3 +215,111 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    (function(){
+        const input = document.getElementById('avatar-input');
+        if (!input) return;
+        input.addEventListener('change', async function(){
+            if (!(input.files && input.files.length > 0)) return;
+
+            const file = input.files[0];
+            // basic client-side validation
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            if (file.size > maxSize) {
+                alert('Please choose an image smaller than 5MB.');
+                return;
+            }
+
+            const form = document.getElementById('avatar-form');
+            const url = form.getAttribute('action');
+            const token = document.querySelector('input[name="_token"]').value;
+
+            const fd = new FormData();
+            fd.append('_token', token);
+            fd.append('avatar', file);
+
+            // Inline preview: show the chosen image immediately in profile and navbar
+            let profileImg = document.getElementById('profile-avatar-img');
+            const navbarImg = document.getElementById('navbar-avatar-img');
+            const previousProfileSrc = profileImg ? profileImg.src : null;
+            const previousNavbarSrc = navbarImg ? navbarImg.src : null;
+
+            // If profile image element doesn't exist (user had no avatar), create one and remove placeholder
+            if (!profileImg) {
+                const label = document.querySelector('label[for="avatar-input"]');
+                if (label) {
+                    const placeholder = label.querySelector('.rounded-circle.bg-primary');
+                    const img = document.createElement('img');
+                    img.id = 'profile-avatar-img';
+                    img.width = 100; img.height = 100;
+                    img.className = 'rounded-circle';
+                    img.style.objectFit = 'cover';
+                    img.style.display = 'block';
+                    if (placeholder) label.replaceChild(img, placeholder); else label.insertBefore(img, label.firstChild);
+                    profileImg = img;
+                }
+            }
+
+            try {
+                // set a local preview while upload proceeds
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (profileImg) profileImg.src = e.target.result;
+                    if (navbarImg) navbarImg.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            } catch (e) {
+                // ignore preview errors
+            }
+
+            const spinner = document.getElementById('avatar-spinner');
+            try {
+                if (spinner) spinner.style.display = 'flex';
+                const res = await fetch(url, {
+                    method: 'POST',
+                    body: fd,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (!res.ok) throw new Error('Upload failed with status ' + res.status);
+
+                const json = await res.json();
+                if (!json || !json.success) throw new Error('Upload failed');
+
+                // Update profile image and navbar image
+                let profileImg = document.getElementById('profile-avatar-img');
+                const navbarImg = document.getElementById('navbar-avatar-img');
+                const avatarUrl = json.avatar_url || json.avatar || json.avatar_url;
+                if (profileImg && avatarUrl) profileImg.src = avatarUrl;
+                if (navbarImg && avatarUrl) navbarImg.src = avatarUrl;
+
+                // Optionally show a success toast
+                const flash = document.createElement('div');
+                flash.className = 'alert alert-success';
+                flash.textContent = 'Profile picture updated';
+                document.querySelector('.container').prepend(flash);
+                setTimeout(() => flash.remove(), 4000);
+
+            } catch (err) {
+                console.error(err);
+                alert('Failed to upload image. Try again.');
+                // revert preview if possible
+                try {
+                    if (profileImg && typeof previousProfileSrc !== 'undefined' && previousProfileSrc) profileImg.src = previousProfileSrc;
+                    if (navbarImg && typeof previousNavbarSrc !== 'undefined' && previousNavbarSrc) navbarImg.src = previousNavbarSrc;
+                } catch (e) {
+                    // ignore revert errors
+                }
+            } finally {
+                if (spinner) spinner.style.display = 'none';
+                // clear input so same file can be reselected later
+                input.value = '';
+            }
+        });
+    })();
+</script>
+@endpush
