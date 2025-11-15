@@ -45,7 +45,7 @@
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="navbarDropdown">
                             <li>
-                                <a class="dropdown-item" href="{{ route('admin.dashboard') }}">
+                                <a class="dropdown-item" href="{{ route('admin.profile') }}">
                                     <i class="fas fa-id-badge me-2"></i>Profile
                                 </a>
                             </li>

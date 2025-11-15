@@ -62,35 +62,40 @@ return [
 
         // Supabase (S3-compatible) disk. Fill these ENV values in your .env file if you want
         // to store uploads in a Supabase bucket.
+        // Supabase S3-compatible disks. Configure multiple disks pointing to different buckets
+        // so the application can store avatars, documents, etc. in separate Supabase buckets.
         'supabase' => [
-    'driver' => 's3',
-    'key' => env('SUPABASE_SERVICE_KEY'),
-    'secret' => env('SUPABASE_SERVICE_KEY'),
-    'region' => 'us-east-1',
-    'bucket' => env('SUPABASE_BUCKET_DEFAULT', 'avatars'),
-    'endpoint' => env('SUPABASE_ENDPOINT'),
-    'use_path_style_endpoint' => true,
-],
+            'driver' => 's3',
+            'key' => env('SUPABASE_SERVICE_KEY'),
+            'secret' => env('SUPABASE_SERVICE_SECRET'),
+            'region' => env('SUPABASE_REGION', 'us-east-1'),
+            'bucket' => env('SUPABASE_BUCKET_DEFAULT', 'avatars'),
+            'endpoint' => env('SUPABASE_ENDPOINT'),
+            'use_path_style_endpoint' => env('SUPABASE_USE_PATH_STYLE_ENDPOINT', true),
+            'visibility' => 'public',
+        ],
 
-'supabase_avatars' => [
-    'driver' => 's3',
-    'key' => env('SUPABASE_SERVICE_KEY'),
-    'secret' => env('SUPABASE_SERVICE_KEY'),
-    'region' => 'us-east-1',
-    'bucket' => env('SUPABASE_BUCKET_AVATARS', 'avatars'),
-    'endpoint' => env('SUPABASE_ENDPOINT'),
-    'use_path_style_endpoint' => true,
-],
+        'supabase_avatars' => [
+            'driver' => 's3',
+            'key' => env('SUPABASE_SERVICE_KEY'),
+            'secret' => env('SUPABASE_SERVICE_SECRET'),
+            'region' => env('SUPABASE_REGION', 'us-east-1'),
+            'bucket' => env('SUPABASE_BUCKET_AVATARS', env('SUPABASE_BUCKET_DEFAULT', 'avatars')),
+            'endpoint' => env('SUPABASE_ENDPOINT'),
+            'use_path_style_endpoint' => env('SUPABASE_USE_PATH_STYLE_ENDPOINT', true),
+            'visibility' => 'public',
+        ],
 
-'supabase_documents' => [
-    'driver' => 's3',
-    'key' => env('SUPABASE_SERVICE_KEY'),
-    'secret' => env('SUPABASE_SERVICE_KEY'),
-    'region' => 'us-east-1',
-    'bucket' => env('SUPABASE_BUCKET_DOCUMENTS', 'documents'),
-    'endpoint' => env('SUPABASE_ENDPOINT'),
-    'use_path_style_endpoint' => true,
-],
+        'supabase_documents' => [
+            'driver' => 's3',
+            'key' => env('SUPABASE_SERVICE_KEY'),
+            'secret' => env('SUPABASE_SERVICE_SECRET'),
+            'region' => env('SUPABASE_REGION', 'us-east-1'),
+            'bucket' => env('SUPABASE_BUCKET_DOCUMENTS', 'documents'),
+            'endpoint' => env('SUPABASE_ENDPOINT'),
+            'use_path_style_endpoint' => env('SUPABASE_USE_PATH_STYLE_ENDPOINT', true),
+            'visibility' => 'public',
+        ],
 
 
     ],

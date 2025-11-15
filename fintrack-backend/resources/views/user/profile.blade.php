@@ -19,15 +19,15 @@
                                 @csrf
                                 <input type="file" id="avatar-input" name="avatar" accept="image/*" class="d-none">
                                 <label for="avatar-input" style="cursor: pointer; display: inline-block; position: relative; width:100px; height:100px;">
-                                    @php $avatarUrl = auth()->user()->avatar; @endphp
-                                    @if($avatarUrl)
-                                        {{-- Use the accessor URL directly (may be a full Supabase URL). Append cache-bust token. --}}
-                                        <img id="profile-avatar-img" src="{{ $avatarUrl }}{{ strpos($avatarUrl, '?') === false ? '?' : '&' }}v={{ auth()->user()->updated_at?->timestamp ?? time() }}" alt="{{ auth()->user()->name }}" class="rounded-circle" width="100" height="100" style="object-fit:cover; display:block;">
-                                    @else
-                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 100px; height: 100px; margin: 0 auto;">
-                                            <span style="font-size: 48px;">{{ substr(auth()->user()->name, 0, 1) }}</span>
-                                        </div>
-                                    @endif
+                                    @php
+                                        $user = auth()->user();
+                                        $avatarUrl = $user && ($user->profile_picture ?? $user->avatar)
+                                            ? (filter_var($user->profile_picture ?? $user->avatar, FILTER_VALIDATE_URL)
+                                                ? ($user->profile_picture ?? $user->avatar)
+                                                : Storage::url($user->profile_picture ?? $user->avatar))
+                                            : asset('assets/uploads/images/default.png');
+                                    @endphp
+                                    <img id="profile-avatar-img" src="{{ $avatarUrl }}{{ strpos($avatarUrl, '?') === false ? '?' : '&' }}v={{ $user && $user->updated_at ? $user->updated_at->timestamp : time() }}" alt="{{ $user->name ?? 'Profile' }}" class="rounded-circle" width="100" height="100" style="object-fit:cover; display:block; margin:0 auto;">
                                     <div id="avatar-spinner" style="position:absolute; inset:0; display:none; align-items:center; justify-content:center;">
                                         <div class="spinner-border text-light" role="status" style="width:2rem; height:2rem;">
                                             <span class="visually-hidden">Loading...</span>
@@ -36,13 +36,13 @@
                                 </label>
                             </form>
                         </div>
-                        <h5>{{ auth()->user()->name }}</h5>
-                        <p class="text-muted">{{ auth()->user()->username }}</p>
+                        <h5>{{ $user->name ?? '' }}</h5>
+                        <p class="text-muted">{{ $user->username ?? '' }}</p>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label text-muted">Email</label>
-                        <p class="fw-semibold">{{ auth()->user()->email }}</p>
+                        <p class="fw-semibold">{{ $user->email ?? '—' }}</p>
                     </div>
 
                     <div class="mb-3">
@@ -53,15 +53,15 @@
                     <div class="mb-3">
                         <label class="form-label text-muted">Status</label>
                         <p>
-                            <span class="badge bg-{{ auth()->user()->status === 'active' ? 'success' : 'warning' }}">
-                                {{ ucfirst(auth()->user()->status) }}
+                            <span class="badge bg-{{ ($user->status ?? '') === 'active' ? 'success' : 'warning' }}">
+                                {{ ucfirst($user->status ?? '—') }}
                             </span>
                         </p>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label text-muted">Member Since</label>
-                        <p class="fw-semibold">{{ auth()->user()->created_at->format('M d, Y') }}</p>
+                        <p class="fw-semibold">{{ $user && $user->created_at ? $user->created_at->format('M d, Y') : '—' }}</p>
                     </div>
 
                     <hr>
