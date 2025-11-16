@@ -18,7 +18,7 @@ class AvatarUploadTest extends TestCase
         $user = User::factory()->create();
 
         // Act: act as the user and post an avatar file
-        $file = UploadedFile::fake()->image('avatar.jpg', 100, 100);
+        $file = UploadedFile::fake()->create('avatar.jpg', 100, 'image/jpeg');
 
         $response = $this->actingAs($user)
             ->post(route('user.avatar.update'), [
@@ -27,8 +27,8 @@ class AvatarUploadTest extends TestCase
 
         // Assert: the user record updated and file stored on the public disk
         $user->refresh();
-        $this->assertNotNull($user->avatar, 'avatar path should be set on the user');
-        Storage::disk('public')->assertExists($user->avatar);
+        $this->assertNotNull($user->getRawOriginal('avatar'), 'avatar path should be set on the user');
+        Storage::disk('public')->assertExists($user->getRawOriginal('avatar'));
 
         // Response should redirect back for a non-AJAX request
         $response->assertRedirect();

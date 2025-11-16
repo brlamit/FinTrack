@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\AdminGroupController;
+use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\OtpController;
 use App\Http\Controllers\UserController;
@@ -74,6 +75,12 @@ Route::post('/admin/logout', [AdminAuthController::class, 'logout'])->name('admi
 
 // Admin routes
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    // Admin profile routes
+    Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
+    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('avatar.update');
+    Route::post('/profile/avatar/remove', [ProfileController::class, 'removeAvatar'])->name('avatar.remove');
+    Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/users', [AdminController::class, 'users'])->name('users');
     Route::get('/transactions', [AdminController::class, 'transactions'])->name('transactions');
@@ -128,3 +135,31 @@ Route::middleware(['auth'])->group(function () {
     Route::post('groups/{group}/invite', [\App\Http\Controllers\GroupMemberController::class, 'invite'])->name('groups.invite');
     Route::delete('groups/{group}/members/{member}', [\App\Http\Controllers\GroupMemberController::class, 'remove'])->name('groups.member.remove');
 });
+
+// -----------------------------------------
+// Local diagnostic routes (only enabled in local environment)
+// Use to verify Storage disk uploads to Supabase buckets.
+// Accessible at: /_diagnose/supabase-upload when APP_ENV=local
+// -----------------------------------------
+if (app()->environment('local')) {
+    Route::get('/_diagnose/supabase-upload', function () {
+        try {
+            $disk = env('AVATAR_DISK', 'supabase_avatars');
+            $path = 'diagnostics/' . uniqid('diag_', true) . '.txt';
+            \Illuminate\Support\Facades\Storage::disk($disk)->put($path, 'ok');
+            $exists = \Illuminate\Support\Facades\Storage::disk($disk)->exists($path);
+
+            return response()->json([
+                'ok' => true,
+                'disk' => $disk,
+                'path' => $path,
+                'exists' => $exists,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'ok' => false,
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    });
+}

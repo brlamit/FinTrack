@@ -437,73 +437,32 @@ class UserController extends Controller
         ]);
 
         // Handle avatar upload
-        if ($request->hasFile('avatar')) {
-            $disk = env('AVATAR_DISK', 'public');
+        // Handle avatar upload
+if ($request->hasFile('avatar')) {
+    $disk = env('AVATAR_DISK', 'public'); // supabase or s3 disk
 
-            // Delete old avatar if exists
-            $old = $user->getRawOriginal('avatar');
-            $oldDisk = $user->getRawOriginal('avatar_disk') ?? $disk;
-            if ($old) {
-                try {
-                    if ($oldDisk === 'supabase') {
-                        $s3 = new S3Client([
-                            'version' => 'latest',
-                            'region' => env('SUPABASE_REGION', 'us-east-1'),
-                            'credentials' => [
-                                'key' => env('SUPABASE_KEY'),
-                                'secret' => env('SUPABASE_SECRET'),
-                            ],
-                            'endpoint' => env('SUPABASE_ENDPOINT'),
-                            'use_path_style_endpoint' => env('SUPABASE_USE_PATH_STYLE_ENDPOINT', true),
-                        ]);
-                        $bucket = env('SUPABASE_BUCKET') ?: env('SUPABASE_BUCKET_DEFAULT');
-                        if ($bucket) {
-                            $s3->deleteObject(['Bucket' => $bucket, 'Key' => ltrim($old, '/')]);
-                        }
-                    } else {
-                        Storage::disk($oldDisk)->delete($old);
-                    }
-                } catch (\Throwable $e) {
-                    // ignore deletion errors
-                }
-            }
-
-            $file = $request->file('avatar');
-            if ($disk === 'supabase') {
-                // Upload directly with AWS SDK to Supabase
-                $s3 = new S3Client([
-                    'version' => 'latest',
-                    'region' => env('SUPABASE_REGION', 'us-east-1'),
-                    'credentials' => [
-                        'key' => env('SUPABASE_KEY'),
-                        'secret' => env('SUPABASE_SECRET'),
-                    ],
-                    'endpoint' => env('SUPABASE_ENDPOINT'),
-                    'use_path_style_endpoint' => env('SUPABASE_USE_PATH_STYLE_ENDPOINT', true),
-                ]);
-                $bucket = env('SUPABASE_BUCKET') ?: env('SUPABASE_BUCKET_DEFAULT');
-                if (!$bucket) {
-                    throw new \RuntimeException('No SUPABASE_BUCKET configured');
-                }
-
-                $ext = $file->getClientOriginalExtension() ?: 'png';
-                $key = 'avatars/' . uniqid() . '.' . $ext;
-                $stream = fopen($file->getPathname(), 'r');
-                $s3->putObject([
-                    'Bucket' => $bucket,
-                    'Key' => $key,
-                    'Body' => $stream,
-                    'ACL' => 'public-read',
-                ]);
-                if (is_resource($stream)) fclose($stream);
-
-                $validated['avatar'] = $key;
-                $validated['avatar_disk'] = $disk;
-            } else {
-                $path = $file->store('avatars', $disk);
-                $validated['avatar'] = $path;
-            }
+    // Delete old avatar if exists
+    $old = $user->getRawOriginal('avatar');
+    $oldDisk = $user->getRawOriginal('avatar_disk') ?? $disk;
+    if ($old) {
+        try {
+            Storage::disk($oldDisk)->delete($old);
+        } catch (\Throwable $e) {
+            // ignore errors
         }
+    }
+
+    $file = $request->file('avatar');
+    $ext = $file->getClientOriginalExtension() ?: 'png';
+    $filename = uniqid('avatar_') . '.' . $ext;
+
+    // Upload to disk
+    $path = Storage::disk($disk)->putFileAs('avatars', $file, $filename, ['visibility' => 'public']);
+
+    // Save path & disk in user table
+    $validated['avatar'] = $path;
+    $validated['avatar_disk'] = $disk;
+}
 
         $user->update($validated);
 
@@ -525,66 +484,46 @@ class UserController extends Controller
         if ($request->hasFile('avatar')) {
             $disk = env('AVATAR_DISK', 'public');
 
-            if ($user->getRawOriginal('avatar')) {
-                $old = $user->getRawOriginal('avatar');
-                $oldDisk = $user->getRawOriginal('avatar_disk') ?? $disk;
-                try {
-                    if ($oldDisk === 'supabase') {
-                        $s3 = new S3Client([
-                            'version' => 'latest',
-                            'region' => env('SUPABASE_REGION', 'us-east-1'),
-                            'credentials' => [
-                                'key' => env('SUPABASE_KEY'),
-                                'secret' => env('SUPABASE_SECRET'),
-                            ],
-                            'endpoint' => env('SUPABASE_ENDPOINT'),
-                            'use_path_style_endpoint' => env('SUPABASE_USE_PATH_STYLE_ENDPOINT', true),
-                        ]);
-                        $bucket = env('SUPABASE_BUCKET') ?: env('SUPABASE_BUCKET_DEFAULT');
-                        if ($bucket) {
-                            $s3->deleteObject(['Bucket' => $bucket, 'Key' => ltrim($old, '/')]);
-                        }
-                    } else {
-                        Storage::disk($oldDisk)->delete($old);
-                    }
-                } catch (\Throwable $e) {
-                    // ignore
-                }
-            }
+            if ($request->hasFile('avatar')) {
+    $disk = env('AVATAR_DISK', 'public');
+
+    // Delete old avatar
+    $old = $user->getRawOriginal('avatar');
+    $oldDisk = $user->getRawOriginal('avatar_disk') ?? $disk;
+    if ($old) {
+        try {
+            Storage::disk($oldDisk)->delete($old);
+        } catch (\Throwable $e) { }
+    }
+
+    $file = $request->file('avatar');
+    $ext = $file->getClientOriginalExtension() ?: 'png';
+    $filename = uniqid('avatar_') . '.' . $ext;
+    $path = Storage::disk($disk)->putFileAs('avatars', $file, $filename, ['visibility' => 'public']);
+
+    $user->update([
+        'avatar' => $path,
+        'avatar_disk' => $disk,
+    ]);
+
+    // Return full public URL for frontend
+    $avatarUrl = Storage::disk($disk)->url($path);
+
+    if ($request->expectsJson() || $request->ajax()) {
+        return response()->json([
+            'success' => true,
+            'avatar' => $path,
+            'avatar_url' => $avatarUrl . '?v=' . $user->updated_at?->timestamp,
+        ]);
+    }
+}
+
 
             $file = $request->file('avatar');
-            if ($disk === 'supabase') {
-                $s3 = new S3Client([
-                    'version' => 'latest',
-                    'region' => env('SUPABASE_REGION', 'us-east-1'),
-                    'credentials' => [
-                        'key' => env('SUPABASE_KEY'),
-                        'secret' => env('SUPABASE_SECRET'),
-                    ],
-                    'endpoint' => env('SUPABASE_ENDPOINT'),
-                    'use_path_style_endpoint' => env('SUPABASE_USE_PATH_STYLE_ENDPOINT', true),
-                ]);
-                $bucket = env('SUPABASE_BUCKET') ?: env('SUPABASE_BUCKET_DEFAULT');
-                if (!$bucket) {
-                    throw new \RuntimeException('No SUPABASE_BUCKET configured');
-                }
-
-                $ext = $file->getClientOriginalExtension() ?: 'png';
-                $key = 'avatars/' . uniqid() . '.' . $ext;
-                $stream = fopen($file->getPathname(), 'r');
-                $s3->putObject([
-                    'Bucket' => $bucket,
-                    'Key' => $key,
-                    'Body' => $stream,
-                    'ACL' => 'public-read',
-                ]);
-                if (is_resource($stream)) fclose($stream);
-
-                $user->update(['avatar' => $key, 'avatar_disk' => $disk]);
-            } else {
-                $path = $file->store('avatars', $disk);
-                $user->update(['avatar' => $path, 'avatar_disk' => $disk]);
-            }
+            $ext = $file->getClientOriginalExtension() ?: 'png';
+            $filename = uniqid('avatar_') . '.' . $ext;
+            $path = Storage::disk($disk)->putFileAs('avatars', $file, $filename, ['visibility' => 'public']);
+            $user->update(['avatar' => $path, 'avatar_disk' => $disk]);
         }
 
         // If requested via AJAX/fetch, return JSON with the new avatar URL so

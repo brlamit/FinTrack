@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: fintrack-backend-app:latest
+    ports:
+      - "8000:8000"
+    # Application environment. Prefer using an external .env file that contains
+    # the Supabase `DATABASE_URL` or the individual DB_* vars. Do NOT commit that file.
+    env_file:
+      - .env
+    environment:
+      APP_ENV: local
+      APP_DEBUG: 'true'
+      # Use Supabase (Postgres). Provide either DATABASE_URL or the DB_* vars.
+      DATABASE_URL: ${DATABASE_URL}
+      DB_CONNECTION: pgsql
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      # Optional Supabase client keys (if your app integrates with Supabase client APIs)
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+    restart: unless-stopped
+
+# No local DB service: use Supabase (hosted) by setting DATABASE_URL in .env
