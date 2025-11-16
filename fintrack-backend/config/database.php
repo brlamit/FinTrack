@@ -179,5 +179,11 @@ return [
         ],
 
     ],
+    'host' => env('DB_HOST', '127.0.0.1'),
+'options' => extension_loaded('pdo_pgsql') ? [
+    PDO::ATTR_PERSISTENT => false,
+    PDO::PGSQL_ATTR_DISABLE_PREPARES => true,
+] : [],
+
 
 ];
