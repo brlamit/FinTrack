@@ -8,21 +8,28 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _usernameCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
+
   bool _loading = false;
   String? _error;
 
   void _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_passwordCtrl.text != _confirmCtrl.text) {
-      setState(() { _error = 'Passwords do not match'; });
+      setState(() => _error = 'Passwords do not match');
       return;
     }
-    setState(() { _loading = true; _error = null; });
+
+    setState(() {
+      _error = null;
+      _loading = true;
+    });
+
     try {
       final success = await ApiService.register({
         'name': _nameCtrl.text.trim(),
@@ -31,50 +38,147 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'password': _passwordCtrl.text,
         'password_confirmation': _confirmCtrl.text,
       });
+
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Registered successfully — please login')));
-        Navigator.of(context).pushReplacementNamed('/login');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Registered successfully — please login")),
+        );
+        Navigator.pushReplacementNamed(context, "/login");
       }
     } catch (e) {
-      setState(() { _error = e.toString(); });
+      setState(() => _error = e.toString());
     } finally {
-      setState(() { _loading = false; });
+      setState(() => _loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Create account')),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(16),
-          child: Card(
-            elevation: 4,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(controller: _nameCtrl, decoration: InputDecoration(labelText: 'Full name'), validator: (v) => v==null||v.isEmpty?'Enter name':null),
-                    TextFormField(controller: _emailCtrl, decoration: InputDecoration(labelText: 'Email'), keyboardType: TextInputType.emailAddress, validator: (v) => v==null||v.isEmpty?'Enter email':null),
-                    TextFormField(controller: _usernameCtrl, decoration: InputDecoration(labelText: 'Username'), validator: (v) => v==null||v.isEmpty?'Enter username':null),
-                    TextFormField(controller: _passwordCtrl, decoration: InputDecoration(labelText: 'Password'), obscureText: true, validator: (v) => v==null||v.length<6?'6+ chars':null),
-                    TextFormField(controller: _confirmCtrl, decoration: InputDecoration(labelText: 'Confirm Password'), obscureText: true, validator: (v) => v==null||v.isEmpty?'Confirm':null),
-                    SizedBox(height: 12),
-                    if (_error != null) Text(_error!, style: TextStyle(color: Colors.red)),
-                    SizedBox(height: 8),
-                    ElevatedButton(onPressed: _loading?null:_submit, child: _loading?CircularProgressIndicator(color: Colors.white):Text('Register')),
-                    SizedBox(height: 8),
-                    TextButton(onPressed: () => Navigator.of(context).pushReplacementNamed('/login'), child: Text('Already have an account? Log in'))
-                  ],
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.blue.shade700,
+              Colors.blue.shade400,
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Card(
+              elevation: 10,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Icon(Icons.person_add_alt_1,
+                          size: 60, color: Colors.blue),
+                      SizedBox(height: 8),
+                      Text(
+                        "Create Account",
+                        style: TextStyle(
+                          fontSize: 23,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                      SizedBox(height: 20),
+
+                      // Fields
+                      _buildField("Full Name", _nameCtrl),
+                      _buildField("Email", _emailCtrl,
+                          keyboard: TextInputType.emailAddress),
+                      _buildField("Username", _usernameCtrl),
+                      _buildField("Password", _passwordCtrl, obscure: true),
+                      _buildField("Confirm Password", _confirmCtrl,
+                          obscure: true),
+
+                      SizedBox(height: 12),
+
+                      if (_error != null)
+                        Text(_error!,
+                            style: TextStyle(color: Colors.red, fontSize: 14)),
+
+                      SizedBox(height: 12),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _loading ? null : _submit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue.shade600,
+                            padding: EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: _loading
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ))
+                              : Text(
+                                  "Register",
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                        ),
+                      ),
+
+                      SizedBox(height: 10),
+
+                      TextButton(
+                        onPressed: () => Navigator.pushReplacementNamed(
+                            context, "/login"),
+                        child: Text(
+                          "Already have an account? Log in",
+                          style: TextStyle(color: Colors.blue.shade700),
+                        ),
+                      )
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildField(String label, TextEditingController controller,
+      {bool obscure = false, TextInputType keyboard = TextInputType.text}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: TextFormField(
+        controller: controller,
+        obscureText: obscure,
+        keyboardType: keyboard,
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: TextStyle(color: Colors.blue.shade700),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.blue.shade600),
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        validator: (v) =>
+            v == null || v.isEmpty ? "Enter $label" : null,
       ),
     );
   }

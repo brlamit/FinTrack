@@ -11,90 +11,215 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _loginController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _loading = false;
+  bool _obscurePassword = true;
   String? _error;
 
-  void _submit() async {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
     setState(() {
       _loading = true;
       _error = null;
     });
+
     try {
       final success = await ApiService.login(
         _loginController.text.trim(),
         _passwordController.text,
       );
+
       if (success) {
         Navigator.of(context).pushReplacementNamed('/');
       } else {
-        setState(() {
-          _error = 'Login failed';
-        });
+        setState(() => _error = 'Login failed');
       }
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-      });
+      setState(() => _error = e.toString());
     } finally {
-      setState(() {
-        _loading = false;
-      });
+      setState(() => _loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.blue.shade50,
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Card(
-            elevation: 6,
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    FlutterLogo(size: 72),
-                    SizedBox(height: 12),
-                    Text('Welcome back', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                    SizedBox(height: 16),
-                    TextFormField(
-                      controller: _loginController,
-                      decoration: InputDecoration(labelText: 'Email or Username'),
-                      validator: (v) => v == null || v.isEmpty ? 'Enter email or username' : null,
-                    ),
-                    SizedBox(height: 8),
-                    TextFormField(
-                      controller: _passwordController,
-                      decoration: InputDecoration(labelText: 'Password'),
-                      obscureText: true,
-                      validator: (v) => v == null || v.isEmpty ? 'Enter password' : null,
-                    ),
-                    SizedBox(height: 16),
-                    if (_error != null) Text(_error!, style: TextStyle(color: Colors.red)),
-                    SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _loading ? null : _submit,
-                        child: _loading ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : Text('Login'),
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text('No account?'),
-                        TextButton(onPressed: () => Navigator.of(context).pushReplacementNamed('/register'), child: Text('Create one'))
-                      ],
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Title
+              const Text(
+                "FinTrack",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 38,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue,
+                ),
+              ),
+
+              const SizedBox(height: 10),
+              const Text(
+                "Welcome Back!",
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.black54,
+                ),
+              ),
+
+              const SizedBox(height: 40),
+
+              // Login Box
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.blue.shade100,
+                      blurRadius: 25,
+                      offset: const Offset(0, 12),
                     )
                   ],
                 ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const Text(
+                        "Login",
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
+                      ),
+
+                      const SizedBox(height: 25),
+
+                      // EMAIL/USERNAME
+                      TextFormField(
+                        controller: _loginController,
+                        decoration: InputDecoration(
+                          hintText: "Email or Username",
+                          prefixIcon:
+                              const Icon(Icons.person, color: Colors.blue),
+                          filled: true,
+                          fillColor: Colors.blue.shade50,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        validator: (v) =>
+                            v == null || v.isEmpty ? 'Enter email or username' : null,
+                      ),
+
+                      const SizedBox(height: 15),
+
+                      // PASSWORD
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: _obscurePassword,
+                        decoration: InputDecoration(
+                          hintText: "Password",
+                          prefixIcon:
+                              const Icon(Icons.lock, color: Colors.blue),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: Colors.blue,
+                            ),
+                            onPressed: () {
+                              setState(() =>
+                                  _obscurePassword = !_obscurePassword);
+                            },
+                          ),
+                          filled: true,
+                          fillColor: Colors.blue.shade50,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        validator: (v) =>
+                            v == null || v.isEmpty ? 'Enter password' : null,
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Error message
+                      if (_error != null)
+                        Text(
+                          _error!,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+
+                      const SizedBox(height: 15),
+
+                      // LOGIN BUTTON
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _loading ? null : _submit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: _loading
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                      color: Colors.white, strokeWidth: 2),
+                                )
+                              : const Text(
+                                  "Login",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
+
+              const SizedBox(height: 20),
+
+              // Register Redirect
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text("Don’t have an account? "),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pushReplacementNamed(context, '/register');
+                    },
+                    child: const Text(
+                      "Create one",
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  )
+                ],
+              ),
+            ],
           ),
         ),
       ),
