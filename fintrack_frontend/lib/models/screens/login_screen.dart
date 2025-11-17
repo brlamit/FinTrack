@@ -29,7 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (success) {
-        Navigator.of(context).pushReplacementNamed('/');
+        Navigator.of(context).pushReplacementNamed('/home');
       } else {
         setState(() => _error = 'Login failed');
       }
@@ -226,3 +226,90 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+
+
+
+
+// // test//
+// import 'package:fintrack_frontend/models/screens/register_screen.dart';
+// import 'package:flutter/material.dart';
+// import 'package:supabase_flutter/supabase_flutter.dart';
+// class LoginScreen extends StatefulWidget {
+//   @override
+//   _LoginScreenState createState() => _LoginScreenState();
+// }
+
+// class _LoginScreenState extends State<LoginScreen> {
+//   final emailController = TextEditingController();
+//   final passwordController = TextEditingController();
+//   bool loading = false;
+//   String? error;
+
+//   Future<void> loginUser() async {
+//     setState(() { loading = true; error = null; });
+
+//     try {
+//       final supabase = Supabase.instance.client;
+
+//       final response = await supabase.auth.signInWithPassword(
+//         email: emailController.text.trim(),
+//         password: passwordController.text.trim(),
+//       );
+
+//       if (response.session != null) {
+//         Navigator.pushReplacementNamed(context, '/home');
+//       }
+//     } catch (e) {
+//       setState(() => error = e.toString());
+//     }
+
+//     setState(() => loading = false);
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: AppBar(title: Text("Login")),
+//       body: Padding(
+//         padding: const EdgeInsets.all(20),
+//         child: Column(
+//           children: [
+//             TextField(
+//               controller: emailController,
+//               decoration: InputDecoration(labelText: "Email"),
+//             ),
+
+//             TextField(
+//               controller: passwordController,
+//               obscureText: true,
+//               decoration: InputDecoration(labelText: "Password"),
+//             ),
+
+//             if (error != null)
+//               Padding(
+//                 padding: EdgeInsets.only(top: 10),
+//                 child: Text(error!, style: TextStyle(color: Colors.red)),
+//               ),
+
+//             const SizedBox(height: 20),
+
+//             ElevatedButton(
+//               onPressed: loading ? null : loginUser,
+//               child: loading
+//                   ? CircularProgressIndicator(color: Colors.white)
+//                   : Text("Login"),
+//             ),
+
+//             TextButton(
+//               onPressed: () {
+//                 Navigator.push(context,
+//                     MaterialPageRoute(builder: (_) => RegisterScreen()));
+//               },
+//               child: Text("Don't have an account? Sign Up"),
+//             )
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+// }

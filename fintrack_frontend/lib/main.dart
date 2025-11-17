@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -13,17 +14,19 @@ import 'package:fintrack_frontend/models/screens/report.dart';
 
 // Models (Hive)
 import 'package:fintrack_frontend/models/trancs.dart';   // Transaction Model 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-    // Initialize Supabase BEFORE runApp()
+  await dotenv.load(fileName: ".env");
+
+  // Initialize Supabase BEFORE runApp()
   await Supabase.initialize(
-    url: 'https://xxwxtznerssubuohctsk.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4d3h0em5lcnNzdWJ1b2hjdHNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIzMTU2OTcsImV4cCI6MjA3Nzg5MTY5N30.AghKN85ICAQmDqXOgrR8LrhmFVj2ds3b4mqf7nEuUS4',
+    url: dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
 
   // Initialize Hive
+  await Hive.initFlutter();
   await Hive.initFlutter();
 
   // Register the TransactionAdapter
@@ -48,7 +51,7 @@ class ExpenseTrackerApp extends StatelessWidget {
       ),
 
       // Initial screen
-      home: LoginScreen(),
+      home: HomeScreen(),
 
       // App routes
       routes: {
