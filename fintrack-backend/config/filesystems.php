@@ -47,44 +47,48 @@ return [
             'report' => false,
         ],
 
-        's3' => [
-            'driver' => 's3',
-            'key' => env('AWS_ACCESS_KEY_ID'),
-            'secret' => env('AWS_SECRET_ACCESS_KEY'),
-            'region' => env('AWS_DEFAULT_REGION'),
-            'bucket' => env('AWS_BUCKET'),
-            'url' => env('AWS_URL'),
-            'endpoint' => env('AWS_ENDPOINT'),
-            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
-            'throw' => false,
-            'report' => false,
+        'supabase' => [
+        'driver'         => 's3',
+        'key'            => env('SUPABASE_KEY'),           // service role key
+        'secret'         => env('SUPABASE_SECRET'),         // service role secret
+        'endpoint'       => env('SUPABASE_ENDPOINT'),       // S3-compatible endpoint
+        'region'         => 'auto',                         // required for R2/Supabase
+        'bucket'         => env('SUPABASE_BUCKET', 'avatars'),
+        'url'            => env('SUPABASE_PUBLIC_URL'),     // direct public URL
+        'use_path_style_endpoint' => false,
+        'throw'          => false,
+        'options'        => [
+            'OverrideContentType' => 'auto',
         ],
+        // Critical for Cloudflare R2 / Supabase Storage
+        'bucket_endpoint' => false,
+    ],
 
         // Supabase (S3-compatible) disk. Fill these ENV values in your .env file if you want
         // to store uploads in a Supabase bucket.
         // Supabase S3-compatible disks. Configure multiple disks pointing to different buckets
         // so the application can store avatars, documents, etc. in separate Supabase buckets.
-        'supabase' => [
-            'driver' => 's3',
-            'key' => env('SUPABASE_SERVICE_KEY'),
-            'secret' => env('SUPABASE_SERVICE_SECRET'),
-            'region' => env('SUPABASE_REGION', 'us-east-1'),
-            'bucket' => env('SUPABASE_BUCKET_DEFAULT', 'avatars'),
-            'endpoint' => env('SUPABASE_ENDPOINT'),
-            'use_path_style_endpoint' => env('SUPABASE_USE_PATH_STYLE_ENDPOINT', true),
-            'visibility' => 'public',
-        ],
+        // 'supabase' => [
+        //     'driver' => 's3',
+        //     'key' => env('SUPABASE_SERVICE_KEY'),
+        //     'secret' => env('SUPABASE_SERVICE_SECRET'),
+        //     'region' => env('SUPABASE_REGION', 'us-east-1'),
+        //     'bucket' => env('SUPABASE_BUCKET_DEFAULT', 'avatars'),
+        //     'endpoint' => env('SUPABASE_ENDPOINT'),
+        //     'use_path_style_endpoint' => env('SUPABASE_USE_PATH_STYLE_ENDPOINT', true),
+        //     'visibility' => 'public',
+        // ],
 
-        'supabase_avatars' => [
-            'driver' => 's3',
-            'key' => env('SUPABASE_SERVICE_KEY'),
-            'secret' => env('SUPABASE_SERVICE_SECRET'),
-            'region' => env('SUPABASE_REGION', 'us-east-1'),
-            'bucket' => env('SUPABASE_BUCKET_AVATARS', env('SUPABASE_BUCKET_DEFAULT', 'avatars')),
-            'endpoint' => env('SUPABASE_ENDPOINT'),
-            'use_path_style_endpoint' => env('SUPABASE_USE_PATH_STYLE_ENDPOINT', true),
-            'visibility' => 'public',
-        ],
+        // 'supabase_avatars' => [
+        //     'driver' => 's3',
+        //     'key' => env('SUPABASE_SERVICE_KEY'),
+        //     'secret' => env('SUPABASE_SERVICE_SECRET'),
+        //     'region' => env('SUPABASE_REGION', 'us-east-1'),
+        //     'bucket' => env('SUPABASE_BUCKET_AVATARS', env('SUPABASE_BUCKET_DEFAULT', 'avatars')),
+        //     'endpoint' => env('SUPABASE_ENDPOINT'),
+        //     'use_path_style_endpoint' => env('SUPABASE_USE_PATH_STYLE_ENDPOINT', true),
+        //     'visibility' => 'public',
+        // ],
 
         'supabase_documents' => [
             'driver' => 's3',

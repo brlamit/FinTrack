@@ -2,28 +2,38 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
-use App\Models\UserOtp;
+use Carbon\Carbon;
+use App\Services\AvatarUrlResolver;
+
+/*
+|--------------------------------------------------------------------------
+| User Model - Refactored & Optimized
+|--------------------------------------------------------------------------
+|
+| Features:
+| • Smart avatar URL resolution (local fallback + Supabase support)
+| • Robust budget threshold alerts with delta handling
+| • No duplicate alerts within short time
+| • Clean, testable, maintainable code
+|
+*/
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasApiTokens;
 
     /**
      * The attributes that are mass assignable.
-     *
-     * @var list<string>
      */
     protected $fillable = [
         'name',
         'email',
-    'email_verified_at',
+        'email_verified_at',
         'username',
         'password',
         'phone',
@@ -38,55 +48,7 @@ class User extends Authenticatable
     ];
 
     /**
-     * Return a public URL for the avatar when one is set.
-     */
-    public function getAvatarAttribute($value)
-    {
-        if (!$value) {
-            return null;
-        }
-
-        // If the stored value already looks like a URL, return as-is
-        if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
-            return $value;
-        }
-        // Determine which disk the avatar is stored on. Prefer the explicitly
-        // stored avatar_disk (raw) if present; otherwise use AVATAR_DISK env.
-        $disk = $this->getRawOriginal('avatar_disk') ?: env('AVATAR_DISK', 'public');
-
-        // If the file exists locally (storage/app/public/...), prefer serving
-        // it from the local public disk so the frontend shows the image even
-        // if a previous attempt to upload to Supabase failed.
-        $localPath = storage_path('app/public/' . ltrim($value, '/'));
-        if (file_exists($localPath)) {
-            try {
-                return Storage::disk('public')->url($value);
-            } catch (\Throwable $e) {
-                // ignore and continue to attempt other disks
-            }
-        }
-
-        // Special case for Supabase: if SUPABASE_PUBLIC_URL is provided we can
-        // build a direct public URL (useful when bucket objects are public).
-        if ($disk === 'supabase' && env('SUPABASE_PUBLIC_URL')) {
-            return rtrim(env('SUPABASE_PUBLIC_URL'), '/') . '/' . ltrim($value, '/');
-        }
-
-        try {
-            return Storage::disk($disk)->url($value);
-        } catch (\Throwable $e) {
-            try {
-                return Storage::disk('public')->url($value);
-            } catch (\Throwable $e) {
-                return $value;
-            }
-        }
-    }
-
-    /**
      * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
      */
     protected $hidden = [
         'password',
@@ -95,104 +57,236 @@ class User extends Authenticatable
 
     /**
      * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
      */
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'invited_at' => 'datetime',
-            'password_changed_at' => 'datetime',
-            'password' => 'hashed',
+            'email_verified_at'    => 'datetime',
+            'invited_at'           => 'datetime',
+            'password_changed_at'  => 'datetime',
+            'password'             => 'hashed',
+            'first_login_done'     => 'boolean',
         ];
     }
 
+    // =====================================================================
+    // Avatar Handling
+    // =====================================================================
+
     /**
-     * Get OTP records associated with the user.
+     * Get the public URL for the user's avatar.
      */
+   // Smart Avatar URL — works with Supabase + local fallback
+   // app/Models/User.php
+public function getAvatarAttribute($value)
+{
+    if (!$value || $value === 'default.png') {
+        return asset('assets/uploads/images/default.png');
+    }
+
+    $disk = $this->avatar_disk ?? 'public';
+
+    if ($disk === 'supabase') {
+        return env('SUPABASE_PUBLIC_URL') . '/' . ltrim($value, '/');
+    }
+
+    return Storage::disk($disk)->url($value);
+}
+
+    /**
+     * Helper: Raw avatar path (without accessor)
+     */
+    public function getRawAvatarPath(): ?string
+    {
+        return $this->getRawOriginal('avatar');
+    }
+
+    // =====================================================================
+    // Relationships
+    // =====================================================================
+
     public function otps()
     {
         return $this->hasMany(UserOtp::class);
     }
 
-    /**
-     * Get the user's transactions.
-     */
     public function transactions()
     {
         return $this->hasMany(Transaction::class);
     }
 
-    /**
-     * Get the user's categories.
-     */
     public function categories()
     {
         return $this->hasMany(Category::class);
     }
 
-    /**
-     * Get the user's receipts.
-     */
     public function receipts()
     {
         return $this->hasMany(Receipt::class);
     }
 
-    /**
-     * Get the user's groups.
-     */
-    public function groups()
-    {
-        return $this->belongsToMany(Group::class, 'group_members');
-    }
-
-    /**
-     * Get the groups owned by the user.
-     */
-    public function ownedGroups()
-    {
-        return $this->hasMany(Group::class, 'owner_id');
-    }
-
-    /**
-     * Get the user's budgets.
-     */
     public function budgets()
     {
         return $this->hasMany(Budget::class);
     }
 
-    /**
-     * Get the user's goals.
-     */
     public function goals()
     {
         return $this->hasMany(Goal::class);
     }
 
-    /**
-     * Get the user's notifications.
-     */
     public function notifications()
     {
-        return $this->hasMany(Notification::class);
+        return $this->hasMany(AppNotification::class); // Renamed model recommended
     }
 
-    /**
-     * Get the user's sync tokens.
-     */
     public function syncTokens()
     {
         return $this->hasMany(SyncToken::class);
     }
 
+    public function groups()
+    {
+        return $this->belongsToMany(Group::class, 'group_members');
+    }
+
+    public function ownedGroups()
+    {
+        return $this->hasMany(Group::class, 'owner_id');
+    }
+
+    // =====================================================================
+    // Budget Alert Evaluation
+    // =====================================================================
+
     /**
-     * Check if user is admin.
+     * Evaluate all active budgets when an expense transaction is created/updated.
+     * Fires notifications only when crossing thresholds.
      */
-    public function isAdmin()
+    public function evaluateBudgetsForTransaction(Transaction $transaction, float $previousAmount = 0.0): void
+    {
+        if ($transaction->type !== 'expense') {
+            return;
+        }
+
+        $delta = $transaction->amount - $previousAmount;
+
+        // Only increases in spending can trigger new alerts
+        if ($delta <= 0) {
+            return;
+        }
+
+        $date = $transaction->transaction_date instanceof Carbon
+            ? $transaction->transaction_date->format('Y-m-d')
+            : $transaction->transaction_date;
+
+        $affectedBudgets = $this->budgets()
+            ->active()
+            ->where(function ($query) use ($transaction) {
+                $query->whereNull('category_id')
+                      ->orWhere('category_id', $transaction->category_id);
+            })
+            ->whereDate('start_date', '<=', $date)
+            ->whereDate('end_date', '>=', $date)
+            ->get();
+
+        foreach ($affectedBudgets as $budget) {
+            $this->checkBudgetThresholds($budget, $delta);
+        }
+    }
+
+    /**
+     * Check if any alert threshold has been crossed for a single budget.
+     */
+    protected function checkBudgetThresholds(Budget $budget, float $delta): void
+    {
+        // Ensure current_spending is up-to-date (important in queued jobs or imports)
+        $budget->refreshCurrentSpending();
+        $total = (float) $budget->amount;
+
+        if ($total <= 0) {
+            return;
+        }
+
+        $previousSpending = $budget->current_spending - $delta;
+        $currentSpending  = $budget->current_spending;
+
+        $previousPercent = $previousSpending > 0 ? ($previousSpending / $total) * 100 : 0;
+        $currentPercent  = ($currentSpending / $total) * 100;
+
+        $thresholds = is_array($budget->alert_thresholds)
+            ? $budget->alert_thresholds
+            : json_decode($budget->alert_thresholds, true) ?? [];
+
+        foreach ($thresholds as $threshold) {
+            $threshold = (float) $threshold;
+
+            if ($previousPercent < $threshold && $currentPercent >= $threshold) {
+                $this->notifyBudgetThresholdExceeded($budget, $threshold, $currentPercent, $currentSpending, $total);
+            }
+        }
+    }
+
+    /**
+     * Create a budget alert notification (with deduplication).
+     */
+    protected function notifyBudgetThresholdExceeded(
+        Budget $budget,
+        float $threshold,
+        float $currentPercent,
+        float $currentSpending,
+        float $total
+    ): void {
+        // Prevent spam: same budget + threshold within last hour
+        $recent = AppNotification::where('user_id', $this->id)
+            ->where('type', 'budget_alert')
+            ->whereJsonContains('data->budget_id', $budget->id)
+            ->whereJsonContains('data->threshold', $threshold)
+            ->where('created_at', '>', now()->subHour())
+            ->exists();
+
+        if ($recent) {
+            return;
+        }
+
+        AppNotification::create([
+            'user_id' => $this->id,
+            'title'   => "Budget Alert: {$budget->name}",
+            'message' => sprintf(
+                "You've reached %d%% of your budget '%s' (%s spent of %s).",
+                round($currentPercent),
+                $budget->name,
+                number_format($currentSpending, 2),
+                number_format($total, 2)
+            ),
+            'type' => 'budget_alert',
+            'data' => [
+                'budget_id'        => $budget->id,
+                'threshold'        => $threshold,
+                'current_percent'  => round($currentPercent, 2),
+                'current_spending' => $currentSpending,
+                'budget_total'     => $total,
+            ],
+            'is_read' => false,
+        ]);
+    }
+
+    // =====================================================================
+    // Scopes & Accessors
+    // =====================================================================
+
+    public function isAdmin(): bool
     {
         return $this->role === 'admin';
+    }
+
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
     }
 }

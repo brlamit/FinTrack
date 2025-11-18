@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Transaction;
 use App\Models\Group;
 use App\Models\Budget;
+use App\Models\Notification;
 use App\Models\Category;
 use App\Services\OtpService;
 use Illuminate\Http\Request;
@@ -15,6 +16,7 @@ use Aws\S3\S3Client;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
@@ -297,6 +299,16 @@ class UserController extends Controller
             'category' => $categoryChart,
         ];
 
+        // Recent notifications and unread count for dashboard badge
+        $unreadCount = Notification::where('user_id', $user->id)
+            ->where('is_read', false)
+            ->count();
+
+        $recentNotifications = Notification::where('user_id', $user->id)
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get();
+
         $filters = [
             'chart_period' => $chartPeriodSelection,
             'category_type' => $categoryChartType,
@@ -386,6 +398,8 @@ class UserController extends Controller
             'insights' => $insights,
             'topExpenseCategory' => $topExpenseCategory,
             'overallExpenseRatio' => $overallExpenseRatio,
+            'notifications' => $recentNotifications,
+            'unreadCount' => $unreadCount,
         ]);
     }
 
@@ -393,25 +407,38 @@ class UserController extends Controller
      * Show user profile
      */
     public function profile()
-    {
-        $user = auth()->user();
-        
-        return view('user.profile', [
-            'totalExpenses' => '$0.00',
-            'thisMonthExpenses' => '$0.00',
-            'groupCount' => $user->groups()->count(),
-            'recentTransactions' => Transaction::where('user_id', $user->id)
-                ->whereNull('group_id')
-                ->orderByDesc(DB::raw('COALESCE(transaction_date, created_at)'))
-                ->limit(5)
-                ->get(),
-            'userGroups' => $user->groups()
-                ->with('members')
-                ->latest()
-                ->limit(6)
-                ->get(),
-        ]);
-    }
+{
+    $user = auth()->user();
+
+    // Fix: Use proper query instead of non-existent scope
+    $totalExpenses = Transaction::where('user_id', $user->id)
+        ->whereNull('group_id')
+        ->where('type', 'expense')
+        ->sum('amount');
+
+    $thisMonthExpenses = Transaction::where('user_id', $user->id)
+        ->whereNull('group_id')
+        ->where('type', 'expense')
+        ->whereMonth('transaction_date', now()->month)
+        ->whereYear('transaction_date', now()->year)
+        ->sum('amount');
+
+    $recentTransactions = Transaction::where('user_id', $user->id)
+        ->whereNull('group_id')
+        ->with('category')
+        ->orderByDesc('transaction_date')
+        ->orderByDesc('created_at')
+        ->limit(6)
+        ->get();
+
+    return view('user.profile', [
+        'totalExpenses'     => '$' . number_format((float) $totalExpenses, 2),
+        'thisMonthExpenses' => '$' . number_format((float) $thisMonthExpenses, 2),
+        'groupCount'        => $user->groups()->count(),
+        'recentTransactions' => $recentTransactions,
+        'userGroups'        => $user->groups()->withCount('members')->latest()->limit(6)->get(),
+    ]);
+}
 
     /**
      * Show edit profile form
@@ -424,45 +451,22 @@ class UserController extends Controller
     /**
      * Update user profile
      */
-    public function update(Request $request)
+  public function update(Request $request)
     {
         $user = auth()->user();
 
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
+            'name'     => ['required', 'string', 'max:255'],
             'username' => ['nullable', 'string', 'max:50', Rule::unique('users')->ignore($user->id)],
-            'email' => ['required', 'email', Rule::unique('users')->ignore($user->id)],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'avatar' => ['nullable', 'image', 'max:5120'], // 5MB
+            'email'    => ['required', 'email', Rule::unique('users')->ignore($user->id)],
+            'phone'    => ['nullable', 'string', 'max:20'],
+            'avatar'   => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:5120'], // 5MB
         ]);
 
-        // Handle avatar upload
-        // Handle avatar upload
-if ($request->hasFile('avatar')) {
-    $disk = env('AVATAR_DISK', 'public'); // supabase or s3 disk
-
-    // Delete old avatar if exists
-    $old = $user->getRawOriginal('avatar');
-    $oldDisk = $user->getRawOriginal('avatar_disk') ?? $disk;
-    if ($old) {
-        try {
-            Storage::disk($oldDisk)->delete($old);
-        } catch (\Throwable $e) {
-            // ignore errors
+        // Handle avatar if uploaded
+        if ($request->hasFile('avatar')) {
+            $this->uploadAvatar($request->file('avatar'), $user);
         }
-    }
-
-    $file = $request->file('avatar');
-    $ext = $file->getClientOriginalExtension() ?: 'png';
-    $filename = uniqid('avatar_') . '.' . $ext;
-
-    // Upload to disk
-    $path = Storage::disk($disk)->putFileAs('avatars', $file, $filename, ['visibility' => 'public']);
-
-    // Save path & disk in user table
-    $validated['avatar'] = $path;
-    $validated['avatar_disk'] = $disk;
-}
 
         $user->update($validated);
 
@@ -471,72 +475,79 @@ if ($request->hasFile('avatar')) {
     }
 
     /**
-     * Update only avatar (called from profile page when clicking avatar)
+     * AJAX-only: Update avatar from profile page (click-to-upload)
      */
-    public function updateAvatar(Request $request)
-    {
-        $user = auth()->user();
-
-        $validated = $request->validate([
-            'avatar' => ['required', 'image', 'max:5120'], // 5MB
-        ]);
-
-        if ($request->hasFile('avatar')) {
-            $disk = env('AVATAR_DISK', 'public');
-
-            if ($request->hasFile('avatar')) {
-    $disk = env('AVATAR_DISK', 'public');
-
-    // Delete old avatar
-    $old = $user->getRawOriginal('avatar');
-    $oldDisk = $user->getRawOriginal('avatar_disk') ?? $disk;
-    if ($old) {
-        try {
-            Storage::disk($oldDisk)->delete($old);
-        } catch (\Throwable $e) { }
-    }
-
-    $file = $request->file('avatar');
-    $ext = $file->getClientOriginalExtension() ?: 'png';
-    $filename = uniqid('avatar_') . '.' . $ext;
-    $path = Storage::disk($disk)->putFileAs('avatars', $file, $filename, ['visibility' => 'public']);
-
-    $user->update([
-        'avatar' => $path,
-        'avatar_disk' => $disk,
+  public function updateAvatar(Request $request)
+{
+    $request->validate([
+        'avatar' => 'required|image|mimes:jpeg,png,jpg,webp,gif|max:8192',
     ]);
 
-    // Return full public URL for frontend
-    $avatarUrl = Storage::disk($disk)->url($path);
+    $user = $request->user();
+    $file = $request->file('avatar');
 
-    if ($request->expectsJson() || $request->ajax()) {
-        return response()->json([
-            'success' => true,
-            'avatar' => $path,
-            'avatar_url' => $avatarUrl . '?v=' . $user->updated_at?->timestamp,
-        ]);
+    // Delete old avatar
+    $oldPath = $user->getRawOriginal('avatar');
+    $oldDisk = $user->getRawOriginal('avatar_disk') ?? 'public';
+
+    if ($oldPath && $oldPath !== 'default.png') {
+        try {
+            Storage::disk($oldDisk)->delete($oldPath);
+        } catch (\Throwable $e) {
+            // Ignore if already deleted
+        }
     }
+
+    // Upload new avatar to Supabase
+    $filename = $user->id . '_' . Str::random(20) . '.' . $file->extension();
+    $path = $file->storeAs("avatars/{$user->id}", $filename, 'supabase');
+
+    // Make sure it's public
+    try {
+        Storage::disk('supabase')->setVisibility($path, 'public');
+    } catch (\Throwable $e) {
+        // Usually already public due to bucket policy
+    }
+
+    // Save path + disk
+    $user->update([
+        'avatar'      => $path,
+        'avatar_disk' => 'supabase',
+    ]);
+
+    return response()->json([
+        'success'    => true,
+        'avatar_url' => $user->fresh()->avatar . '?v=' . now()->timestamp,
+        'message'    => 'Avatar updated successfully!',
+    ]);
 }
 
+    /**
+     * Shared avatar upload logic (DRY)
+     */
+    private function uploadAvatar($file, $user)
+    {
+        $disk = env('AVATAR_DISK', 'public'); // = supabase
 
-            $file = $request->file('avatar');
-            $ext = $file->getClientOriginalExtension() ?: 'png';
-            $filename = uniqid('avatar_') . '.' . $ext;
-            $path = Storage::disk($disk)->putFileAs('avatars', $file, $filename, ['visibility' => 'public']);
-            $user->update(['avatar' => $path, 'avatar_disk' => $disk]);
+        // Delete old avatar
+        $oldPath = $user->getRawOriginal('avatar');
+        $oldDisk = $user->getRawOriginal('avatar_disk') ?? $disk;
+
+        if ($oldPath && Storage::disk($oldDisk)->exists($oldPath)) {
+            Storage::disk($oldDisk)->delete($oldPath);
         }
 
-        // If requested via AJAX/fetch, return JSON with the new avatar URL so
-        // the frontend can update without a full page reload.
-        if ($request->expectsJson() || $request->ajax()) {
-            return response()->json([
-                'success' => true,
-                'avatar' => $user->avatar,
-                'avatar_url' => $user->avatar . (strpos($user->avatar, '?') === false ? '?' : '&') . 'v=' . $user->updated_at?->timestamp,
-            ]);
-        }
+        // Generate safe filename
+        $filename = $user->id . '_' . Str::random(20) . '.' . $file->getClientOriginalExtension();
 
-        return back()->with('success', 'Profile picture updated.');
+        // Store in: avatars/{user_id}/filename.jpg
+        $path = $file->storeAs("avatars/{$user->id}", $filename, $disk);
+
+        // Save only the path (not full URL)
+        $user->update([
+            'avatar'       => $path,
+            'avatar_disk'  => $disk,
+        ]);
     }
 
     /**
@@ -1006,5 +1017,21 @@ if ($request->hasFile('avatar')) {
     public function reports()
     {
         return view('user.reports.index');
+    }
+
+    /**
+     * Web view: list notifications for the user
+     */
+    public function notifications(Request $request)
+    {
+        $user = auth()->user();
+
+        $notifications = Notification::where('user_id', $user->id)
+            ->orderByDesc('created_at')
+            ->paginate(20);
+
+        return view('user.notifications.index', [
+            'notifications' => $notifications,
+        ]);
     }
 }

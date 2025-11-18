@@ -4,164 +4,150 @@
 
 @section('content')
 <div class="container-fluid py-4">
-    <div class="row">
-        <!-- Profile Card -->
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Profile Information</h5>
+    <div class="row g-4">
+        <!-- Left: Profile Card -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-gradient text-white text-center py-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <h5 class="mb-0 fw-bold">Profile Information</h5>
                 </div>
-                <div class="card-body">
-                    <div class="text-center mb-4">
-                        <div class="mb-3">
-                            {{-- Avatar upload form: clicking the picture opens file picker and auto-submits --}}
-                            <form id="avatar-form" action="{{ route('user.avatar.update') }}" method="POST" enctype="multipart/form-data" class="d-inline">
-                                @csrf
-                                <input type="file" id="avatar-input" name="avatar" accept="image/*" class="d-none">
-                                <label for="avatar-input" style="cursor: pointer; display: inline-block; position: relative; width:100px; height:100px;">
-                                    @php
-                                        $user = auth()->user();
-                                        $avatarUrl = $user && ($user->profile_picture ?? $user->avatar)
-                                            ? (filter_var($user->profile_picture ?? $user->avatar, FILTER_VALIDATE_URL)
-                                                ? ($user->profile_picture ?? $user->avatar)
-                                                : Storage::url($user->profile_picture ?? $user->avatar))
-                                            : asset('assets/uploads/images/default.png');
-                                    @endphp
-                                    <img id="profile-avatar-img" src="{{ $avatarUrl }}{{ strpos($avatarUrl, '?') === false ? '?' : '&' }}v={{ $user && $user->updated_at ? $user->updated_at->timestamp : time() }}" alt="{{ $user->name ?? 'Profile' }}" class="rounded-circle" width="100" height="100" style="object-fit:cover; display:block; margin:0 auto;">
-                                    <div id="avatar-spinner" style="position:absolute; inset:0; display:none; align-items:center; justify-content:center;">
-                                        <div class="spinner-border text-light" role="status" style="width:2rem; height:2rem;">
-                                            <span class="visually-hidden">Loading...</span>
-                                        </div>
-                                    </div>
-                                </label>
-                            </form>
+                <div class="card-body text-center pt-4">
+                    <!-- Avatar Upload -->
+                    <div class="position-relative d-inline-block mb-4">
+                        <form id="avatar-form" action="{{ route('user.avatar.update') }}" method="POST" enctype="multipart/form-data">
+                            @csrf
+                            <input type="file" name="avatar" id="avatar-input" accept="image/*" class="d-none">
+                            <label for="avatar-input" class="cursor-pointer">
+                                <img src="{{ auth()->user()->avatar }}?v={{ auth()->user()->updated_at->timestamp }}"
+                                     alt="Profile Picture"
+                                     class="rounded-circle shadow-lg border border-5 border-white"
+                                     width="140" height="140"
+                                     style="object-fit: cover; transition: all 0.3s;"
+                                     id="profile-avatar-img">
+                                <div class="position-absolute bottom-0 end-0 bg-primary rounded-circle p-3 shadow-lg hover-scale"
+                                     style="transform: translate(20%, 20%);">
+                                    <i class="fas fa-camera text-white"></i>
+                                </div>
+                            </label>
+                        </form>
+
+                        <!-- Loading Spinner -->
+                        <div id="avatar-spinner" class="position-absolute top-50 start-50 translate-middle d-none">
+                            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;">
+                                <span class="visually-hidden">Uploading...</span>
+                            </div>
                         </div>
-                        <h5>{{ $user->name ?? '' }}</h5>
-                        <p class="text-muted">{{ $user->username ?? '' }}</p>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label text-muted">Email</label>
-                        <p class="fw-semibold">{{ $user->email ?? '—' }}</p>
+                    <h4 class="mb-1">{{ auth()->user()->name }}</h4>
+                    <p class="text-muted mb-3">@if(auth()->user()->username) {{ auth()->user()->username }} @else No username @endif</p>
+
+                    <div class="row g-3 text-start">
+                        <div class="col-12">
+                            <small class="text-muted">Email</small>
+                            <p class="mb-1">{{ auth()->user()->email }}</p>
+                        </div>
+                        <div class="col-12">
+                            <small class="text-muted">Phone</small>
+                            <p class="mb-1">{{ auth()->user()->phone ?? 'Not set' }}</p>
+                        </div>
+                        <div class="col-12">
+                            <small class="text-muted">Member Since</small>
+                            <p class="mb-1">{{ auth()->user()->created_at->format('M d, Y') }}</p>
+                        </div>
+                        <div class="col-12">
+                            <small class="text-muted">Status</small>
+                            <p class="mb-0">
+                                <span class="badge bg-{{ auth()->user()->status === 'active' ? 'success' : 'warning' }} fs-6">
+                                    {{ ucfirst(auth()->user()->status ?? 'active') }}
+                                </span>
+                            </p>
+                        </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label text-muted">Phone</label>
-                        <p class="fw-semibold">{{ auth()->user()->phone ?? 'Not provided' }}</p>
+                    <hr class="my-4">
+
+                    <div class="d-grid gap-2">
+                        <a href="{{ route('user.edit') }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-edit me-2"></i>Edit Profile
+                        </a>
+                        <a href="{{ route('user.security') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-shield-alt me-2"></i>Security
+                        </a>
+                        <a href="{{ route('user.preferences') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-cog me-2"></i>Preferences
+                        </a>
                     </div>
-
-                    <div class="mb-3">
-                        <label class="form-label text-muted">Status</label>
-                        <p>
-                            <span class="badge bg-{{ ($user->status ?? '') === 'active' ? 'success' : 'warning' }}">
-                                {{ ucfirst($user->status ?? '—') }}
-                            </span>
-                        </p>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label text-muted">Member Since</label>
-                        <p class="fw-semibold">{{ $user && $user->created_at ? $user->created_at->format('M d, Y') : '—' }}</p>
-                    </div>
-
-                    <hr>
-
-                    <a href="{{ route('user.edit') }}" class="btn btn-primary btn-sm w-100 mb-2">
-                        <i class="fas fa-edit"></i> Edit Profile
-                    </a>
-                    <a href="{{ route('user.security') }}" class="btn btn-outline-primary btn-sm w-100 mb-2">
-                        <i class="fas fa-lock"></i> Security Settings
-                    </a>
-                    <a href="{{ route('user.preferences') }}" class="btn btn-outline-primary btn-sm w-100">
-                        <i class="fas fa-cog"></i> Preferences
-                    </a>
                 </div>
             </div>
         </div>
 
-        <!-- Recent Activity -->
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Account Overview</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row text-center mb-4">
-                        <div class="col-md-4">
-                            <div class="p-3 bg-light rounded">
-                                <h6 class="text-muted mb-2">Total Expenses</h6>
-                                <h4 class="text-primary">{{ $totalExpenses ?? '$0.00' }}</h4>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="p-3 bg-light rounded">
-                                <h6 class="text-muted mb-2">This Month</h6>
-                                <h4 class="text-success">{{ $thisMonthExpenses ?? '$0.00' }}</h4>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="p-3 bg-light rounded">
-                                <h6 class="text-muted mb-2">Groups</h6>
-                                <h4 class="text-info">{{ $groupCount ?? 0 }}</h4>
-                            </div>
+        <!-- Right: Stats & Activity -->
+        <div class="col-lg-8">
+            <!-- Stats Cards -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-4">
+                    <div class="card bg-primary text-white shadow-sm h-100">
+                        <div class="card-body text-center">
+                            <h5 class="card-title mb-2">Total Expenses</h5>
+                            <h3 class="mb-0">{{ $totalExpenses }}</h3>
                         </div>
                     </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-success text-white shadow-sm h-100">
+                        <div class="card-body text-center">
+                            <h5 class="card-title mb-2">This Month</h5>
+                            <h3 class="mb-0">{{ $thisMonthExpenses }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-info text-white shadow-sm h-100">
+                        <div class="card-body text-center">
+                            <h5 class="card-title mb-2">Groups</h5>
+                            <h3 class="mb-0">{{ $groupCount }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                    <hr>
-
-                    <h6 class="mb-3">Recent Transactions</h6>
+            <!-- Recent Transactions -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Transactions</h5>
+                    <a href="{{ route('user.transactions') }}" class="btn btn-sm btn-outline-light">View All</a>
+                </div>
+                <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-sm table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Description</th>
-                                    <th>Category</th>
-                                    <th>Amount</th>
-                                    <th>Date</th>
-                                </tr>
-                            </thead>
+                        <table class="table table-hover mb-0 align-middle">
                             <tbody>
-                                @forelse($recentTransactions ?? [] as $transaction)
-                                    @php
-                                        $tx = is_array($transaction) ? (object) $transaction : $transaction;
-                                        $transactionDescription = $tx->description ?? '—';
-
-                                        $transactionCategory = null;
-                                        if (isset($tx->category) && is_object($tx->category)) {
-                                            $transactionCategory = $tx->category->name ?? null;
-                                        } elseif (!empty($tx->category_name)) {
-                                            $transactionCategory = $tx->category_name;
-                                        }
-
-                                        $transactionAmount = (float) ($tx->amount ?? 0);
-
-                                        $rawDate = $tx->date ?? ($tx->transaction_date ?? null);
-                                        if ($rawDate instanceof \Carbon\CarbonInterface) {
-                                            $transactionDate = $rawDate->format('M d, Y');
-                                        } elseif ($rawDate) {
-                                            try {
-                                                $transactionDate = \Illuminate\Support\Carbon::parse($rawDate)->format('M d, Y');
-                                            } catch (\Exception $e) {
-                                                $transactionDate = (string) $rawDate;
-                                            }
-                                        } else {
-                                            $transactionDate = '—';
-                                        }
-                                    @endphp
-                                    <tr>
-                                        <td>{{ $transactionDescription }}</td>
-                                        <td>
-                                            @if($transactionCategory)
-                                                <span class="badge bg-secondary">{{ $transactionCategory }}</span>
-                                            @endif
-                                        </td>
-                                        <td class="fw-semibold">${{ number_format($transactionAmount, 2) }}</td>
-                                        <td>{{ $transactionDate }}</td>
-                                    </tr>
+                                @forelse($recentTransactions as $t)
+                                <tr>
+                                    <td class="ps-4">
+                                        <div>
+                                            <div class="fw-bold">{{ $t->description }}</div>
+                                            <small class="text-muted">
+                                                {{ optional($t->category)->name ?? 'Uncategorized' }}
+                                            </small>
+                                        </div>
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <span class="fw-bold text-danger">
+                                            -${{ number_format($t->amount, 2) }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end text-muted pe-4" style="width: 120px;">
+                                        {{ $t->transaction_date?->format('M d') ?? $t->created_at->format('M d') }}
+                                    </td>
+                                </tr>
                                 @empty
-                                    <tr>
-                                        <td colspan="4" class="text-center text-muted">No recent transactions</td>
-                                    </tr>
+                                <tr>
+                                    <td colspan="3" class="text-center py-5 text-muted">
+                                        <i class="fas fa-receipt fa-2x mb-3"></i><br>
+                                        No transactions yet
+                                    </td>
+                                </tr>
                                 @endforelse
                             </tbody>
                         </table>
@@ -169,46 +155,42 @@
                 </div>
             </div>
 
-            <!-- Connected Groups -->
-            <div class="card mt-4">
-                <div class="card-header bg-primary text-white">
+            <!-- Groups -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-dark text-white">
                     <h5 class="mb-0">Your Groups</h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        @forelse($userGroups ?? [] as $group)
-                            @php
-                                $groupInstance = is_array($group) ? (object) $group : $group;
-                                $groupName = $groupInstance->name ?? 'Unnamed Group';
-                                $rawMembers = $groupInstance->members ?? [];
-                                $membersCollection = $rawMembers instanceof \Illuminate\Support\Collection ? $rawMembers : collect($rawMembers);
-                                $memberCount = $membersCollection->count();
-                                $groupDescription = $groupInstance->description ?? null;
-                                $groupId = $groupInstance->id ?? null;
-                            @endphp
-                            <div class="col-md-6 mb-3">
-                                <div class="card border-left-primary">
-                                    <div class="card-body">
-                                        <h6 class="font-weight-bold text-primary">{{ $groupName }}</h6>
-                                        <p class="text-sm text-muted mb-2">
-                                            <i class="fas fa-users"></i> 
-                                            {{ $memberCount }} members
+                    @if($userGroups->count())
+                        <div class="row g-3">
+                            @foreach($userGroups as $group)
+                            <div class="col-md-6">
+                                <div class="card h-100 border-start border-primary border-4">
+                                    <div class="card-body d-flex flex-column">
+                                        <h6 class="text-primary fw-bold">{{ $group->name }}</h6>
+                                        <p class="text-muted small flex-grow-1">
+                                            {{ Str::limit($group->description ?? 'No description', 60) }}
                                         </p>
-                                        @if($groupDescription)
-                                            <p class="text-sm">{{ \Illuminate\Support\Str::limit($groupDescription, 50) }}</p>
-                                        @endif
-                                        <a href="{{ $groupId ? route('user.group', $groupId) : '#' }}" class="btn btn-sm btn-outline-primary">
-                                            View Group
-                                        </a>
+                                        <div class="d-flex justify-content-between align-items-center mt-3">
+                                            <small class="text-muted">
+                                                <i class="fas fa-users"></i> {{ $group->members_count ?? $group->members->count() }} members
+                                            </small>
+                                            <a href="{{ route('user.group', $group) }}" class="btn btn-sm btn-outline-primary">
+                                                View
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        @empty
-                            <div class="col-12">
-                                <p class="text-muted text-center">You haven't joined any groups yet.</p>
-                            </div>
-                        @endforelse
-                    </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="text-center py-5 text-muted">
+                            <i class="fas fa-users fa-3x mb-3 opacity-25"></i>
+                            <p>You haven't joined any groups yet.</p>
+                            <a href="{{ route('groups.index') }}" class="btn btn-primary">Explore Groups</a>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -216,110 +198,80 @@
 </div>
 @endsection
 
+@push('styles')
+<style>
+    .hover-scale { transition: transform 0.2s; }
+    .hover-scale:hover { transform: translate(20%, 20%) scale(1.2); }
+    #profile-avatar-img:hover { opacity: 0.9; }
+</style>
+@endpush
+
 @push('scripts')
 <script>
-    (function(){
-        const input = document.getElementById('avatar-input');
-        if (!input) return;
-        input.addEventListener('change', async function(){
-            if (!(input.files && input.files.length > 0)) return;
+document.getElementById('avatar-input')?.addEventListener('change', function(e) {
+    const file = this.files[0];
+    if (!file) return;
 
-            const file = input.files[0];
-            // basic client-side validation
-            const maxSize = 5 * 1024 * 1024; // 5MB
-            if (file.size > maxSize) {
-                alert('Please choose an image smaller than 5MB.');
-                return;
-            }
+    if (file.size > 8 * 1024 * 1024) {
+        alert('Image must be under 8MB');
+        return;
+    }
 
-            const form = document.getElementById('avatar-form');
-            const url = form.getAttribute('action');
-            const token = document.querySelector('input[name="_token"]').value;
+    const form = this.closest('form');
+    const img = document.getElementById('profile-avatar-img');
+    const navbarImg = document.getElementById('navbar-avatar-img');
+    const spinner = document.getElementById('avatar-spinner');
 
-            const fd = new FormData();
-            fd.append('_token', token);
-            fd.append('avatar', file);
+    // Instant preview
+    const reader = new FileReader();
+    reader.onload = e => {
+        img.src = e.target.result;
+        if (navbarImg) navbarImg.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
 
-            // Inline preview: show the chosen image immediately in profile and navbar
-            let profileImg = document.getElementById('profile-avatar-img');
-            const navbarImg = document.getElementById('navbar-avatar-img');
-            const previousProfileSrc = profileImg ? profileImg.src : null;
-            const previousNavbarSrc = navbarImg ? navbarImg.src : null;
+    // Show spinner
+    spinner.classList.remove('d-none');
 
-            // If profile image element doesn't exist (user had no avatar), create one and remove placeholder
-            if (!profileImg) {
-                const label = document.querySelector('label[for="avatar-input"]');
-                if (label) {
-                    const placeholder = label.querySelector('.rounded-circle.bg-primary');
-                    const img = document.createElement('img');
-                    img.id = 'profile-avatar-img';
-                    img.width = 100; img.height = 100;
-                    img.className = 'rounded-circle';
-                    img.style.objectFit = 'cover';
-                    img.style.display = 'block';
-                    if (placeholder) label.replaceChild(img, placeholder); else label.insertBefore(img, label.firstChild);
-                    profileImg = img;
-                }
-            }
+    const formData = new FormData(form);
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success && data.avatar_url) {
+            const url = data.avatar_url;
+            img.src = url;
+            if (navbarImg) navbarImg.src = url;
 
-            try {
-                // set a local preview while upload proceeds
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    if (profileImg) profileImg.src = e.target.result;
-                    if (navbarImg) navbarImg.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            } catch (e) {
-                // ignore preview errors
-            }
-
-            const spinner = document.getElementById('avatar-spinner');
-            try {
-                if (spinner) spinner.style.display = 'flex';
-                const res = await fetch(url, {
-                    method: 'POST',
-                    body: fd,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-
-                if (!res.ok) throw new Error('Upload failed with status ' + res.status);
-
-                const json = await res.json();
-                if (!json || !json.success) throw new Error('Upload failed');
-
-                // Update profile image and navbar image
-                let profileImg = document.getElementById('profile-avatar-img');
-                const navbarImg = document.getElementById('navbar-avatar-img');
-                const avatarUrl = json.avatar_url || json.avatar || json.avatar_url;
-                if (profileImg && avatarUrl) profileImg.src = avatarUrl;
-                if (navbarImg && avatarUrl) navbarImg.src = avatarUrl;
-
-                // Optionally show a success toast
-                const flash = document.createElement('div');
-                flash.className = 'alert alert-success';
-                flash.textContent = 'Profile picture updated';
-                document.querySelector('.container').prepend(flash);
-                setTimeout(() => flash.remove(), 4000);
-
-            } catch (err) {
-                console.error(err);
-                alert('Failed to upload image. Try again.');
-                // revert preview if possible
-                try {
-                    if (profileImg && typeof previousProfileSrc !== 'undefined' && previousProfileSrc) profileImg.src = previousProfileSrc;
-                    if (navbarImg && typeof previousNavbarSrc !== 'undefined' && previousNavbarSrc) navbarImg.src = previousNavbarSrc;
-                } catch (e) {
-                    // ignore revert errors
-                }
-            } finally {
-                if (spinner) spinner.style.display = 'none';
-                // clear input so same file can be reselected later
-                input.value = '';
-            }
-        });
-    })();
+            // Success toast
+            const toast = document.createElement('div');
+            toast.className = 'position-fixed bottom-0 end-0 p-3';
+            toast.style.zIndex = 9999;
+            toast.innerHTML = `
+                <div class="toast show align-items-center text-white bg-success border-0">
+                    <div class="d-flex">
+                        <div class="toast-body">Profile picture updated!</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Upload failed. Please try again.');
+    })
+    .finally(() => {
+        spinner.classList.add('d-none');
+        this.value = '';
+    });
+});
 </script>
 @endpush
