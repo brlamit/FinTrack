@@ -27,10 +27,24 @@ class ApiService {
 
   /// POST /api/login with { username, password }
   /// expects { token: string, user: {...} }
-  static Future<bool> login(String login, String password) async {
+  static Future<bool> login(String email, String password) async {
     try {
+      var loginEmail = email;
+      if (!loginEmail.contains('@')) {
+        final userRecord = await _supabase
+            .from('users')
+            .select('email')
+            .eq('username', loginEmail)
+            .maybeSingle();
+
+        if (userRecord == null || userRecord['email'] == null) {
+          throw Exception('User not found');
+        }
+        loginEmail = userRecord['email'] as String;
+      }
+
       final response = await _supabase.auth.signInWithPassword(
-        email: login,
+        email: loginEmail,
         password: password,
       );
       if (response.user != null) {
@@ -54,7 +68,13 @@ class ApiService {
           await _supabase.from('users').insert(userData);
           currentUser = userData;
         }
+
+        _prefs ??= await SharedPreferences.getInstance();
         await _prefs?.setString('user', jsonEncode(currentUser));
+        token = response.session?.accessToken;
+        if (token != null) {
+          await _prefs?.setString('token', token!);
+        }
         return true;
       }
       return false;
@@ -76,8 +96,20 @@ class ApiService {
         },
       );
       if (response.user != null) {
-        // User profile will be created automatically by database trigger
-        // No need to manually insert into users table
+        final userId = response.user!.id;
+        final profileData = {
+          'id': userId,
+          'name': payload['name'],
+          'email': payload['email'],
+          'username': payload['username'],
+        };
+
+        // Ensure the profile exists in the users table, even if the trigger is missing
+        await _supabase.from('users').upsert(profileData);
+
+        currentUser = profileData;
+        _prefs ??= await SharedPreferences.getInstance();
+        await _prefs?.setString('user', jsonEncode(currentUser));
         return true;
       }
       return false;
