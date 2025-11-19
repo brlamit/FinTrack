@@ -6,17 +6,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiService {
   static SharedPreferences? _prefs;
   static Map<String, dynamic>? currentUser;
-  static String? token; // Keep for backward compatibility if needed
+  static String? token;
 
   static SupabaseClient get _supabase => Supabase.instance.client;
 
   static Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
+
     token = _prefs?.getString('token');
+
+    // Restore user
     final u = _prefs?.getString('user');
     if (u != null && u.isNotEmpty) {
       try {
-        currentUser = jsonDecode(u) as Map<String, dynamic>?;
+        currentUser = jsonDecode(u);
       } catch (_) {
         currentUser = null;
       }
@@ -25,11 +28,14 @@ class ApiService {
 
   static bool get isLoggedIn => _supabase.auth.currentUser != null;
 
-  /// POST /api/login with { username, password }
-  /// expects { token: string, user: {...} }
-  static Future<bool> login(String email, String password) async {
+  // -------------------------
+  // LOGIN
+  // -------------------------
+  static Future<bool> login(String emailOrUsername, String password) async {
     try {
-      var loginEmail = email;
+      String loginEmail = emailOrUsername;
+
+      // Username login support
       if (!loginEmail.contains('@')) {
         final userRecord = await _supabase
             .from('users')
@@ -37,54 +43,63 @@ class ApiService {
             .eq('username', loginEmail)
             .maybeSingle();
 
-        if (userRecord == null || userRecord['email'] == null) {
+        if (userRecord == null) {
           throw Exception('User not found');
         }
-        loginEmail = userRecord['email'] as String;
+
+        loginEmail = userRecord['email'];
       }
 
       final response = await _supabase.auth.signInWithPassword(
         email: loginEmail,
         password: password,
       );
-      if (response.user != null) {
-        // Get user profile from database, create if doesn't exist
-        try {
-          final userData = await _supabase
-              .from('users')
-              .select()
-              .eq('id', response.user!.id)
-              .single();
-          currentUser = userData;
-        } catch (e) {
-          // Profile doesn't exist, create it
-          final userData = {
-            'id': response.user!.id,
-            'name': response.user!.userMetadata?['name'] ?? 'User',
-            'email': response.user!.email!,
-            'username': response.user!.userMetadata?['username'] ??
-                response.user!.email!.split('@').first,
-          };
-          await _supabase.from('users').insert(userData);
-          currentUser = userData;
-        }
 
-        _prefs ??= await SharedPreferences.getInstance();
-        await _prefs?.setString('user', jsonEncode(currentUser));
-        token = response.session?.accessToken;
-        if (token != null) {
-          await _prefs?.setString('token', token!);
-        }
-        return true;
+      if (response.user == null) {
+        return false;
       }
-      return false;
+
+      final userId = response.user!.id;
+
+      // Load user profile
+      final userProfile = await _supabase
+          .from('users')
+          .select()
+          .eq('id', userId)
+          .maybeSingle();
+
+      if (userProfile != null) {
+        currentUser = userProfile;
+      } else {
+        // Create profile if missing
+        final newUser = {
+          'id': userId,
+          'name': response.user!.userMetadata?['name'] ?? 'User',
+          'email': response.user!.email,
+          'username': response.user!.userMetadata?['username'] ??
+              response.user!.email!.split('@').first,
+        };
+
+        await _supabase.from('users').insert(newUser);
+        currentUser = newUser;
+      }
+
+      // Save locally
+      await _prefs?.setString('user', jsonEncode(currentUser));
+      token = response.session?.accessToken;
+      if (token != null) {
+        await _prefs?.setString('token', token!);
+      }
+
+      return true;
     } catch (e) {
       throw Exception('Login failed: $e');
     }
   }
 
-  /// Register a new user. Expects fields: name, email, username, password
-  /// Returns true on success (201 or 200).
+  // -------------------------
+  // REGISTER
+  // -------------------------
   static Future<bool> register(Map<String, String> payload) async {
     try {
       final response = await _supabase.auth.signUp(
@@ -95,51 +110,65 @@ class ApiService {
           'username': payload['username'],
         },
       );
-      if (response.user != null) {
-        final userId = response.user!.id;
-        final profileData = {
-          'id': userId,
-          'name': payload['name'],
-          'email': payload['email'],
-          'username': payload['username'],
-        };
 
-        // Ensure the profile exists in the users table, even if the trigger is missing
-        await _supabase.from('users').upsert(profileData);
+      if (response.user == null) return false;
 
-        currentUser = profileData;
-        _prefs ??= await SharedPreferences.getInstance();
-        await _prefs?.setString('user', jsonEncode(currentUser));
-        return true;
-      }
-      return false;
+      final profileData = {
+        'id': response.user!.id,
+        'name': payload['name'],
+        'email': payload['email'],
+        'username': payload['username'],
+      };
+
+      // Safe upsert
+      await _supabase.from('users').upsert(profileData);
+
+      currentUser = profileData;
+      await _prefs?.setString('user', jsonEncode(profileData));
+
+      return true;
     } catch (e) {
       throw Exception('Register failed: $e');
     }
   }
 
-  /// Add expense to a group, with optional image and split data.
-  /// `splits` should be a List of maps: [{ 'user_id': id, 'amount': '12.34' }, ...]
-  static Future<bool> addExpense(int groupId, String amount, String description,
-      List<Map<String, dynamic>> splits,
-      {File? imageFile, String splitType = 'custom'}) async {
+  // -------------------------
+  // ADD EXPENSE
+  // -------------------------
+  static Future<bool> addExpense(
+    int groupId,
+    String amount,
+    String description,
+    List<Map<String, dynamic>> splits, {
+    File? imageFile,
+    String splitType = 'custom',
+  }) async {
     try {
       String? receiptPath;
+
+      // Upload image (if exists)
       if (imageFile != null && await imageFile.exists()) {
         final fileName =
-            '${DateTime.now().millisecondsSinceEpoch}_${imageFile.path.split(Platform.pathSeparator).last}';
+            '${DateTime.now().millisecondsSinceEpoch}_${imageFile.path.split('/').last}';
+
         receiptPath = 'receipts/$fileName';
-        await _supabase.storage.from('receipts').upload(receiptPath, imageFile);
+
+        await _supabase.storage
+            .from('receipts')
+            .upload(receiptPath, imageFile);
       }
 
       // Insert transaction
       final transactionData = {
         'user_id': _supabase.auth.currentUser!.id,
         'group_id': groupId,
-        'amount': double.parse(amount),
+        'amount': double.tryParse(amount) ?? 0.0,
         'description': description,
         'type': 'expense',
-        'split_meta': {'splits': splits, 'split_type': splitType},
+        'split_meta': {
+          'splits': splits,
+          'split_type': splitType,
+        },
         'date': DateTime.now().toIso8601String().split('T').first,
       };
 
@@ -149,29 +178,30 @@ class ApiService {
           .select()
           .single();
 
-      // If receipt, insert receipt record
+      // Insert receipt record
       if (receiptPath != null) {
         await _supabase.from('receipts').insert({
           'transaction_id': transactionResponse['id'],
           'user_id': _supabase.auth.currentUser!.id,
           'storage_path': receiptPath,
-          'filename': imageFile!.path.split(Platform.pathSeparator).last,
-          'mime': 'image/jpeg', // assume, or detect
+          'filename': imageFile!.path.split('/').last,
+          'mime': 'image/jpeg',
           'size': await imageFile.length(),
         });
       }
 
-      // Deduct from group budget if exists
-      // Assuming budgets table has owner_type 'group', owner_id groupId
+      // Budget deduction
       final budgets = await _supabase
           .from('budgets')
           .select()
           .eq('owner_type', 'group')
           .eq('owner_id', groupId);
+
       if (budgets.isNotEmpty) {
-        // For simplicity, assume one budget, deduct amount
         final budget = budgets.first;
-        final newLimit = budget['limit_amount'] - double.parse(amount);
+        final newLimit =
+            (budget['limit_amount'] as num) - (double.tryParse(amount) ?? 0.0);
+
         await _supabase
             .from('budgets')
             .update({'limit_amount': newLimit}).eq('id', budget['id']);
@@ -183,39 +213,52 @@ class ApiService {
     }
   }
 
+  // -------------------------
+  // LOGOUT
+  // -------------------------
   static Future<void> logout() async {
     await _supabase.auth.signOut();
     currentUser = null;
     await _prefs?.remove('user');
+    await _prefs?.remove('token');
   }
 
+  // -------------------------
+  // FETCH GROUPS
+  // -------------------------
   static Future<List<dynamic>> fetchGroups() async {
     try {
       final userId = _supabase.auth.currentUser!.id;
-      // Groups where user is owner
-      final ownedGroups =
-          await _supabase.from('groups').select().eq('owner_id', userId);
 
-      // Groups where user is member
-      final memberGroups = await _supabase
+      final owned = await _supabase
+          .from('groups')
+          .select()
+          .eq('owner_id', userId);
+
+      final member = await _supabase
           .from('group_members')
           .select('groups(*)')
           .eq('user_id', userId);
 
-      final groups = [
-        ...ownedGroups,
-        ...memberGroups.map((m) => m['groups']).where((g) => g != null)
+      return [
+        ...owned,
+        ...member.map((m) => m['groups']).where((g) => g != null),
       ];
-      return groups;
     } catch (e) {
       throw Exception('Failed to load groups: $e');
     }
   }
 
+  // -------------------------
+  // FETCH SINGLE GROUP
+  // -------------------------
   static Future<Map<String, dynamic>> fetchGroup(int groupId) async {
     try {
-      final group =
-          await _supabase.from('groups').select().eq('id', groupId).single();
+      final group = await _supabase
+          .from('groups')
+          .select()
+          .eq('id', groupId)
+          .single();
 
       final members = await _supabase
           .from('group_members')
@@ -238,6 +281,9 @@ class ApiService {
     }
   }
 
+  // -------------------------
+  // REMOVE MEMBER
+  // -------------------------
   static Future<bool> removeMember(int groupId, int memberId) async {
     try {
       await _supabase
@@ -245,6 +291,7 @@ class ApiService {
           .delete()
           .eq('group_id', groupId)
           .eq('user_id', memberId);
+
       return true;
     } catch (e) {
       throw Exception('Failed to remove member: $e');

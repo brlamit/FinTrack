@@ -39,6 +39,7 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
     cupertino_icons: ^1.0.8
     supabase_flutter: ^2.10.3
+    bloc: ^9.1.0
 
 dev_dependencies:
     flutter_test:
@@ -96,3 +97,4 @@ flutter:
   # see https://flutter.dev/to/font-from-package
   assets:
     - .env
+

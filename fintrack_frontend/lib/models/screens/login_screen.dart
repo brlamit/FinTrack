@@ -25,19 +25,17 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final success = await ApiService.login(
         _loginController.text.trim(),
-        _passwordController.text,
+        _passwordController.text.trim(),
       );
 
       if (success) {
-        Navigator.of(context).pushReplacementNamed('/home');
-      } else {
-        setState(() => _error = 'Login failed');
+        Navigator.pushReplacementNamed(context, '/home');
       }
     } catch (e) {
       setState(() => _error = e.toString());
-    } finally {
-      setState(() => _loading = false);
     }
+
+    setState(() => _loading = false);
   }
 
   @override
@@ -48,31 +46,22 @@ class _LoginScreenState extends State<LoginScreen> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Title
               const Text(
                 "FinTrack",
-                textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 38,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blue,
-                ),
+                    fontSize: 38,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue),
               ),
-
               const SizedBox(height: 10),
               const Text(
                 "Welcome Back!",
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.black54,
-                ),
+                style: TextStyle(fontSize: 18, color: Colors.black54),
               ),
-
               const SizedBox(height: 40),
 
-              // Login Box
+              // Card UI
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
@@ -81,28 +70,25 @@ class _LoginScreenState extends State<LoginScreen> {
                   boxShadow: [
                     BoxShadow(
                       color: Colors.blue.shade100,
-                      blurRadius: 25,
-                      offset: const Offset(0, 12),
-                    )
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
                   ],
                 ),
                 child: Form(
                   key: _formKey,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       const Text(
                         "Login",
                         style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue,
-                        ),
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue),
                       ),
-
                       const SizedBox(height: 25),
 
-                      // EMAIL/USERNAME
+                      // Username or Email
                       TextFormField(
                         controller: _loginController,
                         decoration: InputDecoration(
@@ -112,17 +98,16 @@ class _LoginScreenState extends State<LoginScreen> {
                           filled: true,
                           fillColor: Colors.blue.shade50,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none),
                         ),
                         validator: (v) =>
-                            v == null || v.isEmpty ? 'Enter email or username' : null,
+                            v!.isEmpty ? "Enter email or username" : null,
                       ),
 
                       const SizedBox(height: 15),
 
-                      // PASSWORD
+                      // Password
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
@@ -145,26 +130,25 @@ class _LoginScreenState extends State<LoginScreen> {
                           filled: true,
                           fillColor: Colors.blue.shade50,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none),
                         ),
                         validator: (v) =>
-                            v == null || v.isEmpty ? 'Enter password' : null,
+                            v!.isEmpty ? "Enter password" : null,
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 15),
 
-                      // Error message
+                      // Error
                       if (_error != null)
                         Text(
                           _error!,
                           style: const TextStyle(color: Colors.red),
                         ),
 
-                      const SizedBox(height: 15),
+                      const SizedBox(height: 20),
 
-                      // LOGIN BUTTON
+                      // Login button
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
@@ -173,23 +157,16 @@ class _LoginScreenState extends State<LoginScreen> {
                             backgroundColor: Colors.blue,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                                borderRadius: BorderRadius.circular(12)),
                           ),
                           child: _loading
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                      color: Colors.white, strokeWidth: 2),
-                                )
+                              ? const CircularProgressIndicator(
+                                  color: Colors.white, strokeWidth: 2)
                               : const Text(
                                   "Login",
                                   style: TextStyle(
-                                    fontSize: 18,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold),
                                 ),
                         ),
                       ),
@@ -200,25 +177,22 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 20),
 
-              // Register Redirect
+              // Redirect to register
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text("Don’t have an account? "),
                   GestureDetector(
-                    onTap: () {
-                      Navigator.pushReplacementNamed(context, '/register');
-                    },
+                    onTap: () =>
+                        Navigator.pushReplacementNamed(context, '/register'),
                     child: const Text(
                       "Create one",
                       style: TextStyle(
-                        color: Colors.blue,
-                        fontWeight: FontWeight.bold,
-                      ),
+                          color: Colors.blue, fontWeight: FontWeight.bold),
                     ),
                   )
                 ],
-              ),
+              )
             ],
           ),
         ),
@@ -226,90 +200,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-
-
-
-
-// // test//
-// import 'package:fintrack_frontend/models/screens/register_screen.dart';
-// import 'package:flutter/material.dart';
-// import 'package:supabase_flutter/supabase_flutter.dart';
-// class LoginScreen extends StatefulWidget {
-//   @override
-//   _LoginScreenState createState() => _LoginScreenState();
-// }
-
-// class _LoginScreenState extends State<LoginScreen> {
-//   final emailController = TextEditingController();
-//   final passwordController = TextEditingController();
-//   bool loading = false;
-//   String? error;
-
-//   Future<void> loginUser() async {
-//     setState(() { loading = true; error = null; });
-
-//     try {
-//       final supabase = Supabase.instance.client;
-
-//       final response = await supabase.auth.signInWithPassword(
-//         email: emailController.text.trim(),
-//         password: passwordController.text.trim(),
-//       );
-
-//       if (response.session != null) {
-//         Navigator.pushReplacementNamed(context, '/home');
-//       }
-//     } catch (e) {
-//       setState(() => error = e.toString());
-//     }
-
-//     setState(() => loading = false);
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(title: Text("Login")),
-//       body: Padding(
-//         padding: const EdgeInsets.all(20),
-//         child: Column(
-//           children: [
-//             TextField(
-//               controller: emailController,
-//               decoration: InputDecoration(labelText: "Email"),
-//             ),
-
-//             TextField(
-//               controller: passwordController,
-//               obscureText: true,
-//               decoration: InputDecoration(labelText: "Password"),
-//             ),
-
-//             if (error != null)
-//               Padding(
-//                 padding: EdgeInsets.only(top: 10),
-//                 child: Text(error!, style: TextStyle(color: Colors.red)),
-//               ),
-
-//             const SizedBox(height: 20),
-
-//             ElevatedButton(
-//               onPressed: loading ? null : loginUser,
-//               child: loading
-//                   ? CircularProgressIndicator(color: Colors.white)
-//                   : Text("Login"),
-//             ),
-
-//             TextButton(
-//               onPressed: () {
-//                 Navigator.push(context,
-//                     MaterialPageRoute(builder: (_) => RegisterScreen()));
-//               },
-//               child: Text("Don't have an account? Sign Up"),
-//             )
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
