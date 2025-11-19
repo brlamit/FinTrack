@@ -18,10 +18,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _loading = false;
   String? _error;
 
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _emailCtrl.dispose();
+    _usernameCtrl.dispose();
+    _passwordCtrl.dispose();
+    _confirmCtrl.dispose();
+    super.dispose();
+  }
+
   void _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
     if (_passwordCtrl.text != _confirmCtrl.text) {
-      setState(() => _error = 'Passwords do not match');
+      setState(() => _error = "Passwords do not match");
       return;
     }
 
@@ -32,11 +43,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     try {
       final success = await ApiService.register({
-        'name': _nameCtrl.text.trim(),
-        'email': _emailCtrl.text.trim(),
-        'username': _usernameCtrl.text.trim(),
-        'password': _passwordCtrl.text,
-        'password_confirmation': _confirmCtrl.text,
+        "name": _nameCtrl.text.trim(),
+        "email": _emailCtrl.text.trim(),
+        "username": _usernameCtrl.text.trim(),
+        "password": _passwordCtrl.text,
       });
 
       if (success) {
@@ -68,9 +78,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: EdgeInsets.symmetric(horizontal: 20),
             child: Card(
-              elevation: 10,
+              elevation: 12,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(18),
               ),
@@ -80,22 +90,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   key: _formKey,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Icon(Icons.person_add_alt_1,
-                          size: 60, color: Colors.blue),
+                          size: 60, color: Colors.blue.shade700),
                       SizedBox(height: 8),
                       Text(
                         "Create Account",
                         style: TextStyle(
-                          fontSize: 23,
+                          fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: Colors.blue.shade700,
                         ),
                       ),
                       SizedBox(height: 20),
 
-                      // Fields
                       _buildField("Full Name", _nameCtrl),
                       _buildField("Email", _emailCtrl,
                           keyboard: TextInputType.emailAddress),
@@ -107,10 +115,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       SizedBox(height: 12),
 
                       if (_error != null)
-                        Text(_error!,
-                            style: TextStyle(color: Colors.red, fontSize: 14)),
+                        Text(
+                          _error!,
+                          style: TextStyle(
+                              color: Colors.red, fontSize: 14, height: 1.3),
+                        ),
 
-                      SizedBox(height: 12),
+                      SizedBox(height: 16),
 
                       SizedBox(
                         width: double.infinity,
@@ -120,28 +131,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             backgroundColor: Colors.blue.shade600,
                             padding: EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           child: _loading
                               ? SizedBox(
-                                  width: 20,
                                   height: 20,
+                                  width: 20,
                                   child: CircularProgressIndicator(
-                                    color: Colors.white,
                                     strokeWidth: 2,
-                                  ))
+                                    color: Colors.white,
+                                  ),
+                                )
                               : Text(
                                   "Register",
                                   style: TextStyle(fontSize: 16),
                                 ),
                         ),
                       ),
-
                       SizedBox(height: 10),
 
                       TextButton(
-                        onPressed: () => Navigator.pushReplacementNamed(
-                            context, "/login"),
+                        onPressed: () =>
+                            Navigator.pushReplacementNamed(context, "/login"),
                         child: Text(
                           "Already have an account? Log in",
                           style: TextStyle(color: Colors.blue.shade700),
@@ -158,10 +170,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildField(String label, TextEditingController controller,
-      {bool obscure = false, TextInputType keyboard = TextInputType.text}) {
+  Widget _buildField(
+    String label,
+    TextEditingController controller, {
+    bool obscure = false,
+    TextInputType keyboard = TextInputType.text,
+  }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
+      padding: const EdgeInsets.only(bottom: 14.0),
       child: TextFormField(
         controller: controller,
         obscureText: obscure,
@@ -169,16 +185,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
         decoration: InputDecoration(
           labelText: label,
           labelStyle: TextStyle(color: Colors.blue.shade700),
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
           ),
           focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.blue.shade600),
+            borderSide: BorderSide(color: Colors.blue.shade600, width: 2),
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-        validator: (v) =>
-            v == null || v.isEmpty ? "Enter $label" : null,
+        validator: (value) =>
+            value == null || value.isEmpty ? "Enter $label" : null,
       ),
     );
   }
