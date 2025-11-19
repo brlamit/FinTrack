@@ -131,6 +131,11 @@ Route::middleware(['auth'])->group(function () {
     // User reports
     Route::get('/reports', [UserController::class, 'reports'])->name('user.reports');
 
+    // Notifications (web view)
+    Route::get('/notifications', [UserController::class, 'notifications'])->name('user.notifications');
+    Route::post('/notifications/mark-all-read', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('user.notifications.mark-all-read');
+    Route::post('/notifications/{notification}/mark-read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('user.notifications.mark-read');
+
     // Group member invite
     Route::post('groups/{group}/invite', [\App\Http\Controllers\GroupMemberController::class, 'invite'])->name('groups.invite');
     Route::delete('groups/{group}/members/{member}', [\App\Http\Controllers\GroupMemberController::class, 'remove'])->name('groups.member.remove');

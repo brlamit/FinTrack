@@ -56,6 +56,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Notifications
     Route::get('notifications', [\App\Http\Controllers\NotificationController::class, 'index']);
+    Route::get('notifications/unread-count', [\App\Http\Controllers\NotificationController::class, 'unreadCount']);
+    Route::post('notifications/{notification}/mark-read', [\App\Http\Controllers\NotificationController::class, 'markAsRead']);
+    Route::post('notifications/mark-all-read', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead']);
 
     // Sync
     Route::post('sync/transactions', [\App\Http\Controllers\SyncController::class, 'transactions']);

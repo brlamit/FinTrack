@@ -152,38 +152,28 @@
     @endif
 
             <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Budget Status</h5>
+                    <a href="{{ route('user.budgets') }}" class="btn btn-sm btn-light">Manage Budgets</a>
                 </div>
                 <div class="card-body">
-                    @forelse($activeBudgets ?? [] as $budget)
-                        <div class="mb-4">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="fw-semibold">{{ data_get($budget, 'label', 'General') }}</span>
-                                <span class="small fw-semibold {{ data_get($budget, 'status_class') }}">{{ data_get($budget, 'status_label') }}</span>
-                            </div>
-                            <div class="d-flex justify-content-between text-muted small mb-2">
-                                <span>Spent {{ data_get($budget, 'spent_formatted', '$0.00') }}</span>
-                                <span>Limit {{ data_get($budget, 'limit_formatted', '$0.00') }}</span>
-                            </div>
-                            <div class="progress" style="height: 6px;">
-                                <div class="progress-bar" role="progressbar"
-                                     style="width: {{ data_get($budget, 'progress', 0) }}%"
-                                     aria-valuenow="{{ data_get($budget, 'progress', 0) }}"
-                                     aria-valuemin="0" aria-valuemax="100">
+                    @if(!empty($activeBudgets) && count($activeBudgets) > 0)
+                        <div class="row g-3">
+                            @foreach($activeBudgets as $budget)
+                                <div class="col-12 col-md-6 col-lg-4">
+                                    @include('user.partials._budget_card', ['budget' => $budget])
                                 </div>
-                            </div>
-                            <div class="d-flex justify-content-between text-muted small mt-2">
-                                <span>Remaining {{ data_get($budget, 'remaining_formatted', '$0.00') }}</span>
-                                <span>{{ data_get($budget, 'progress', 0) }}% used</span>
-                            </div>
+                            @endforeach
                         </div>
-                    @empty
-                        <p class="text-muted text-center mb-3">No active budgets yet.</p>
-                        <div class="d-flex justify-content-center">
-                            <a href="{{ route('user.budgets') }}" class="btn btn-outline-primary btn-sm">Create a budget</a>
+                        <div class="mt-3 text-end">
+                            <a href="{{ route('user.budgets') }}" class="btn btn-outline-primary">View all budgets</a>
                         </div>
-                    @endforelse
+                    @else
+                        <div class="text-center py-4">
+                            <p class="text-muted mb-3">You don't have any active budgets yet.</p>
+                            <a href="{{ route('user.budgets') }}" class="btn btn-primary">Create your first budget</a>
+                        </div>
+                    @endif
                 </div>
             </div>
     <!-- Charts -->
