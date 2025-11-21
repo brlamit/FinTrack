@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:fintrack_frontend/models/screens/login_screen.dart';
+import 'package:fintrack_frontend/models/screens/signup_screen.dart';
+import 'package:fintrack_frontend/models/screens/home_screen.dart';
+import 'package:fintrack_frontend/models/screens/forgot_password_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,11 +23,15 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Auth App',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: const LoginScreen(),
+
+      initialRoute: '/login',
+
+      routes: {
+        '/login': (_) => const LoginScreen(),
+        '/register': (_) => const SignupScreen(),
+        '/home': (_) => const HomeScreen(),
+        '/forgot-password': (_) => const ForgotPasswordScreen(),
+      },
     );
   }
 }

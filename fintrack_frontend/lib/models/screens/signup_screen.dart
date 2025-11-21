@@ -1,6 +1,6 @@
+import 'package:fintrack_frontend/models/screens/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:fintrack_frontend/models/screens/verify_email_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -32,9 +32,10 @@ class _SignupScreenState extends State<SignupScreen> {
 
       if (res.user != null) {
         Navigator.push(
+          // ignore: use_build_context_synchronously
           context,
           MaterialPageRoute(
-            builder: (_) => VerifyEmailScreen(email: email.text),
+            builder: (_) => LoginScreen(),
           ),
         );
       }
@@ -68,6 +69,7 @@ class _SignupScreenState extends State<SignupScreen> {
               ElevatedButton(
                 onPressed: loading ? null : signup,
                 child: loading ? const CircularProgressIndicator() : const Text("Create Account"),
+                
               ),
             ],
           ),
