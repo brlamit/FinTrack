@@ -433,13 +433,13 @@ packages:
     source: hosted
     version: "2.0.1"
   http:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: http
-      sha256: "87721a4a50b19c7f1d49001e51409bddc46303966ce89a65af4f4e6004896412"
+      sha256: "5895291c13fa8a3bd82e76d5627f69e0d85ca6a30dcac95c4ea19a5d555879c2"
       url: "https://pub.dev"
     source: hosted
-    version: "1.6.0"
+    version: "0.13.6"
   http_multi_server:
     dependency: transitive
     description:
@@ -780,10 +780,10 @@ packages:
     dependency: transitive
     description:
       name: sign_in_with_apple
-      sha256: "0975c23b9f8b30a80e27d5659a75993a093d4cb5f4eb7d23a9ccc586fea634e0"
+      sha256: e84a62e17b7e463abf0a64ce826c2cd1f0b72dff07b7b275e32d5302d76fb4c5
       url: "https://pub.dev"
     source: hosted
-    version: "5.0.0"
+    version: "6.1.4"
   sign_in_with_apple_platform_interface:
     dependency: transitive
     description:
@@ -796,10 +796,10 @@ packages:
     dependency: transitive
     description:
       name: sign_in_with_apple_web
-      sha256: "44b66528f576e77847c14999d5e881e17e7223b7b0625a185417829e5306f47a"
+      sha256: "2f7c38368f49e3f2043bca4b46a4a61aaae568c140a79aa0675dc59ad0ca49bc"
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.1"
+    version: "2.1.1"
   sky_engine:
     dependency: transitive
     description: flutter
@@ -881,10 +881,10 @@ packages:
     dependency: "direct main"
     description:
       name: supabase_auth_ui
-      sha256: d8bdfbe957b3028780c3074574b790588c48a4a75d895e95d63404ebf7686653
+      sha256: c1d9c5018f37701af94887fb5d15fa7eed284c58e4e06015644218a49140ec47
       url: "https://pub.dev"
     source: hosted
-    version: "0.4.4"
+    version: "0.5.5"
   supabase_flutter:
     dependency: "direct main"
     description:
@@ -1062,5 +1062,5 @@ packages:
     source: hosted
     version: "2.1.0"
 sdks:
-  dart: ">=3.10.0 <4.0.0"
+  dart: ">=3.10.0-0 <4.0.0"
   flutter: ">=3.35.0"
