@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -9,6 +11,24 @@ class ApiService {
   static String? token;
 
   static SupabaseClient get _supabase => Supabase.instance.client;
+
+  // Backend API base (select per platform). Examples:
+  // - Web: http://localhost:8000/api
+  // - Android emulator (Android Studio): http://10.0.2.2:8000/api
+  // - Genymotion: http://10.0.3.2:8000/api
+  // - iOS simulator: http://127.0.0.1:8000/api (on macOS)
+  static String get backendBaseUrl {
+    if (kIsWeb) return 'http://localhost:8000/api';
+    try {
+      if (Platform.isAndroid) return 'http://10.0.2.2:8000/api';
+      if (Platform.isIOS) return 'http://127.0.0.1:8000/api';
+      // Desktop (Windows/macOS/Linux) and other platforms — assume localhost
+      return 'http://localhost:8000/api';
+    } catch (_) {
+      // If Platform isn't available for some reason, fall back to localhost
+      return 'http://localhost:8000/api';
+    }
+  }
 
   static Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
@@ -26,72 +46,45 @@ class ApiService {
     }
   }
 
-  static bool get isLoggedIn => _supabase.auth.currentUser != null;
+  // Consider user logged in if we have a stored token or currentUser
+  static bool get isLoggedIn =>
+      (token != null && token!.isNotEmpty) || currentUser != null;
 
   // -------------------------
   // LOGIN
   // -------------------------
   static Future<bool> login(String emailOrUsername, String password) async {
     try {
-      String loginEmail = emailOrUsername;
-
-      // Username login support
-      if (!loginEmail.contains('@')) {
-        final userRecord = await _supabase
-            .from('users')
-            .select('email')
-            .eq('username', loginEmail)
-            .maybeSingle();
-
-        if (userRecord == null) {
-          throw Exception('User not found');
-        }
-
-        loginEmail = userRecord['email'];
-      }
-
-      final response = await _supabase.auth.signInWithPassword(
-        email: loginEmail,
-        password: password,
+      // Call backend login endpoint (accepts `username` which can be email)
+      final uri = Uri.parse('$backendBaseUrl/auth/login');
+      final resp = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'username': emailOrUsername, 'password': password}),
       );
 
-      if (response.user == null) {
-        return false;
+      if (resp.statusCode == 200 || resp.statusCode == 201) {
+        final body = jsonDecode(resp.body);
+        // Backend returns { user: {...}, token: '...' }
+        if (body['user'] != null) {
+          currentUser = Map<String, dynamic>.from(body['user']);
+        }
+
+        token = body['token'] as String?;
+        if (token != null) {
+          await _prefs?.setString('token', token!);
+        }
+
+        if (currentUser != null) {
+          await _prefs?.setString('user', jsonEncode(currentUser));
+        }
+
+        return true;
       }
 
-      final userId = response.user!.id;
-
-      // Load user profile
-      final userProfile = await _supabase
-          .from('users')
-          .select()
-          .eq('id', userId)
-          .maybeSingle();
-
-      if (userProfile != null) {
-        currentUser = userProfile;
-      } else {
-        // Create profile if missing
-        final newUser = {
-          'id': userId,
-          'name': response.user!.userMetadata?['name'] ?? 'User',
-          'email': response.user!.email,
-          'username': response.user!.userMetadata?['username'] ??
-              response.user!.email!.split('@').first,
-        };
-
-        await _supabase.from('users').insert(newUser);
-        currentUser = newUser;
-      }
-
-      // Save locally
-      await _prefs?.setString('user', jsonEncode(currentUser));
-      token = response.session?.accessToken;
-      if (token != null) {
-        await _prefs?.setString('token', token!);
-      }
-
-      return true;
+      // Handle validation or auth errors
+      final err = resp.body.isNotEmpty ? resp.body : 'Login failed';
+      throw Exception('Login failed: HTTP ${resp.statusCode} - $err');
     } catch (e) {
       throw Exception('Login failed: $e');
     }
@@ -102,31 +95,33 @@ class ApiService {
   // -------------------------
   static Future<bool> register(Map<String, String> payload) async {
     try {
-      final response = await _supabase.auth.signUp(
-        email: payload['email']!,
-        password: payload['password']!,
-        data: {
-          'name': payload['name'],
-          'username': payload['username'],
-        },
+      final uri = Uri.parse('$backendBaseUrl/auth/register');
+      final resp = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(payload),
       );
 
-      if (response.user == null) return false;
+      if (resp.statusCode == 200 || resp.statusCode == 201) {
+        final body = jsonDecode(resp.body);
+        if (body['user'] != null) {
+          currentUser = Map<String, dynamic>.from(body['user']);
+        }
 
-      final profileData = {
-        'id': response.user!.id,
-        'name': payload['name'],
-        'email': payload['email'],
-        'username': payload['username'],
-      };
+        token = body['token'] as String?;
+        if (token != null) {
+          await _prefs?.setString('token', token!);
+        }
 
-      // Safe upsert
-      await _supabase.from('users').upsert(profileData);
+        if (currentUser != null) {
+          await _prefs?.setString('user', jsonEncode(currentUser));
+        }
 
-      currentUser = profileData;
-      await _prefs?.setString('user', jsonEncode(profileData));
+        return true;
+      }
 
-      return true;
+      final err = resp.body.isNotEmpty ? resp.body : 'Register failed';
+      throw Exception('Register failed: HTTP ${resp.statusCode} - $err');
     } catch (e) {
       throw Exception('Register failed: $e');
     }
@@ -153,9 +148,7 @@ class ApiService {
 
         receiptPath = 'receipts/$fileName';
 
-        await _supabase.storage
-            .from('receipts')
-            .upload(receiptPath, imageFile);
+        await _supabase.storage.from('receipts').upload(receiptPath, imageFile);
       }
 
       // Insert transaction
@@ -165,10 +158,7 @@ class ApiService {
         'amount': double.tryParse(amount) ?? 0.0,
         'description': description,
         'type': 'expense',
-        'split_meta': {
-          'splits': splits,
-          'split_type': splitType,
-        },
+        'split_meta': {'splits': splits, 'split_type': splitType},
         'date': DateTime.now().toIso8601String().split('T').first,
       };
 
@@ -204,7 +194,8 @@ class ApiService {
 
         await _supabase
             .from('budgets')
-            .update({'limit_amount': newLimit}).eq('id', budget['id']);
+            .update({'limit_amount': newLimit})
+            .eq('id', budget['id']);
       }
 
       return true;
@@ -217,8 +208,22 @@ class ApiService {
   // LOGOUT
   // -------------------------
   static Future<void> logout() async {
-    await _supabase.auth.signOut();
+    try {
+      if (token != null) {
+        final uri = Uri.parse('$backendBaseUrl/auth/logout');
+        await http.post(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        );
+      }
+    } catch (_) {}
+
+    // Clear local state
     currentUser = null;
+    token = null;
     await _prefs?.remove('user');
     await _prefs?.remove('token');
   }
