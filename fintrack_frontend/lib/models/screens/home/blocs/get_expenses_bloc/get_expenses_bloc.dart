@@ -1,6 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:fintrack_frontend/models/screens/home/repositories/expense_repository.dart';
+import 'package:fintrack_frontend/packages/expense_repository/lib/expense_repository.dart';
 
 part 'get_expenses_event.dart';
 part 'get_expenses_state.dart';
