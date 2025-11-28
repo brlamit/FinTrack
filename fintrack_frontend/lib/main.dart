@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:fintrack_frontend/models/screens/login_screen.dart';
 import 'package:fintrack_frontend/models/screens/signup_screen.dart';
-import 'package:fintrack_frontend/models/screens/home_screen.dart';
 import 'package:fintrack_frontend/models/screens/forgot_password_screen.dart';
 
 void main() async {
@@ -29,7 +28,6 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (_) => const LoginScreen(),
         '/register': (_) => const SignupScreen(),
-        '/home': (_) => const HomeScreen(),
         '/forgot-password': (_) => const ForgotPasswordScreen(),
       },
     );
