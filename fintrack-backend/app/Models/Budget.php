@@ -10,6 +10,17 @@ class Budget extends Model
 {
     use HasFactory;
 
+    /**
+     * Append computed attributes so they serialize to JSON for the frontend.
+     *
+     * @var array
+     */
+    protected $appends = [
+        'current_spending',
+        'remaining_amount',
+        'spending_percentage',
+    ];
+
     protected $fillable = [
         'user_id',
         'category_id',

@@ -5,221 +5,241 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'FinTrack')</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <!-- Bootstrap 5.3 (latest stable) + Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
     @stack('styles')
 </head>
 <body class="bg-light">
+
+    <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm py-3">
         <div class="container px-4">
-            <a class="navbar-brand fw-semibold" href="{{ route('user.dashboard') }}">FinTrack</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#userNavbar" aria-controls="userNavbar" aria-expanded="false">
+            <a class="navbar-brand fw-bold" href="{{ route('user.dashboard') }}">FinTrack</a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#userNavbar">
                 <span class="navbar-toggler-icon"></span>
             </button>
+
             <div class="collapse navbar-collapse" id="userNavbar">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item"><a class="nav-link" href="{{ route('user.dashboard') }}">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link {{ request()->routeIs('user.dashboard') ? 'active fw-semibold' : '' }}" href="{{ route('user.dashboard') }}">Dashboard</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ route('user.transactions') }}">Transactions</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ route('user.budgets') }}">Budgets</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ route('user.groups') }}">Groups</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ route('user.reports') }}">Reports</a></li>
                 </ul>
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item dropdown me-2">
-                        {{-- Notifications dropdown --}}
+
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <!-- Notifications Dropdown -->
+                    <li class="nav-item dropdown me-3">
                         @php
-                            $__notif_unread = 0;
-                            $__recent_notifs = [];
-                            if (auth()->check()) {
-                                $__notif_unread = \App\Models\Notification::where('user_id', auth()->id())->where('is_read', false)->count();
-                                $__recent_notifs = \App\Models\Notification::where('user_id', auth()->id())->orderByDesc('created_at')->limit(5)->get();
-                            }
+                            $unreadCount = auth()->check() ? \App\Models\Notification::where('user_id', auth()->id())->where('is_read', false)->count() : 0;
+                            $recentNotifications = auth()->check()
+                                ? \App\Models\Notification::where('user_id', auth()->id())->latest()->take(5)->get()
+                                : collect();
                         @endphp
-                        <a class="nav-link dropdown-toggle position-relative" href="#" id="notificationsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+
+                        <a class="nav-link position-relative" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-bell fa-lg"></i>
-                            <span id="notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.65rem; display: {{ $__notif_unread ? 'inline-block' : 'none' }};">
-                                {{ $__notif_unread }}
-                            </span>
+                            @if($unreadCount > 0)
+                                <span id="notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
+                                    {{ $unreadCount }}
+                                </span>
+                            @endif
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end shadow p-2" aria-labelledby="notificationsDropdown" style="min-width:320px;">
-                            <li class="px-3 py-2 d-flex justify-content-between align-items-center">
+
+                        <ul class="dropdown-menu dropdown-menu-end shadow p-2" style="min-width: 340px;">
+                            <li class="px-3 py-2 d-flex justify-content-between align-items-center border-bottom">
                                 <strong>Notifications</strong>
-                                <a href="#" id="mark-all-notifs" class="small">Mark all read</a>
+                                <a href="#" id="mark-all-notifs" class="small text-primary">Mark all as read</a>
                             </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <div id="notif-list">
-                                @forelse($__recent_notifs as $n)
-                                    <li class="dropdown-item py-2 d-flex justify-content-between align-items-start" data-notif-id="{{ $n->id }}">
-                                        <div>
-                                            <div class="small fw-semibold">{{ $n->title }}</div>
-                                            <div class="small text-muted">{{ Str::limit($n->message, 80) }}</div>
-                                            <div class="small text-muted mt-1">{{ $n->created_at->diffForHumans() }}</div>
+                            <div id="notif-list" class="max-h-80 overflow-auto">
+                                @forelse($recentNotifications as $n)
+                                    <li class="dropdown-item py-3 border-bottom" data-notif-id="{{ $n->id }}">
+                                        <div class="d-flex justify-content-between">
+                                            <div class="flex-grow-1">
+                                                <div class="fw-semibold small">{{ $n->title }}</div>
+                                                <div class="text-muted small">{{ Str::limit($n->message, 80) }}</div>
+                                                <div class="text-muted smaller mt-1">{{ $n->created_at->diffForHumans() }}</div>
+                                            </div>
+                                            @if(!$n->is_read)
+                                                <span class="badge bg-primary ms-2">New</span>
+                                            @endif
                                         </div>
-                                        @if(!$n->is_read)
-                                            <span class="badge bg-primary align-self-start ms-2">New</span>
-                                        @endif
                                     </li>
                                 @empty
-                                    <li class="dropdown-item text-muted small">No notifications</li>
+                                    <li class="dropdown-item text-center text-muted py-4">No notifications yet</li>
                                 @endforelse
                             </div>
-                            <li><hr class="dropdown-divider"></li>
-                            <li class="text-center"><a href="{{ route('user.notifications') ?? url('/notifications') }}" class="small">View all</a></li>
+                            <li class="text-center py-2">
+                                <a href="{{ route('user.notifications', [], false) ?? '#' }}" class="small">View all notifications</a>
+                            </li>
                         </ul>
                     </li>
 
+                    <!-- User Dropdown -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" id="userNavbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            @php $avatarUrl = auth()->user()->avatar; @endphp
-                            @if($avatarUrl)
-                                {{-- Append updated_at as cache-bust token to ensure newest image shows after upload --}}
-                                <img id="navbar-avatar-img" src="{{ $avatarUrl }}{{ strpos($avatarUrl, '?') === false ? '?' : '&' }}v={{ auth()->user()->updated_at?->timestamp ?? time() }}" alt="{{ auth()->user()->name }}" class="rounded-circle" width="36" height="36" style="object-fit:cover;">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" role="button" data-bs-toggle="dropdown">
+                            @if(auth()->user()->avatar)
+                                <img src="{{ auth()->user()->avatar }}?v={{ auth()->user()->updated_at?->timestamp ?? now()->timestamp }}"
+                                     alt="{{ auth()->user()->name }}"
+                                     class="rounded-circle"
+                                     width="38" height="38" style="object-fit: cover;">
                             @else
-                                <i class="fas fa-user-circle fa-lg"></i>
+                                <i class="fas fa-user-circle fa-2x text-secondary"></i>
                             @endif
-                            <span id="navbar-username">{{ auth()->user()->name }}</span>
+                            <span class="d-none d-md-inline">{{ auth()->user()->name }}</span>
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userNavbarDropdown">
-                            <li>
-                                <a class="dropdown-item" href="{{ route('user.profile') }}">
-                                    <i class="fas fa-user me-2"></i>Profile
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="{{ route('user.preferences') }}">
-                                    <i class="fas fa-cog me-2"></i>Settings
-                                </a>
-                            </li>
+                        <ul class="dropdown-menu dropdown-menu-end shadow">
+                            <li><a class="dropdown-item" href="{{ route('user.profile') }}"><i class="fas fa-user me-2"></i> Profile</a></li>
+                            <li><a class="dropdown-item" href="{{ route('user.preferences') }}"><i class="fas fa-cog me-2"></i> Settings</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
-                                <a class="dropdown-item text-danger" href="{{ route('auth.logout') }}" onclick="event.preventDefault(); document.getElementById('user-logout-form').submit();">
-                                    <i class="fas fa-sign-out-alt me-2"></i>Logout
-                                </a>
+                                <form id="user-logout-form" action="{{ route('auth.logout') }}" method="POST" class="d-inline">
+                                    @csrf
+                                    <button type="submit" class="dropdown-item text-danger">
+                                        <i class="fas fa-sign-out-alt me-2"></i> Logout
+                                    </button>
+                                </form>
                             </li>
                         </ul>
                     </li>
                 </ul>
-                <form id="user-logout-form" action="{{ route('auth.logout') }}" method="POST" class="d-none">
-                    @csrf
-                </form>
             </div>
         </div>
     </nav>
 
-     <div class="container mt-4">
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <!-- Flash Messages -->
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert" id="flash-success">
                 {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         @endif
         @if(session('error'))
             <div class="alert alert-danger alert-dismissible fade show" role="alert" id="flash-error">
                 {{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         @endif
 
         @yield('content')
     </div>
 
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Auto-hide flash messages -->
     <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        ['flash-success', 'flash-error'].forEach(function(id) {
-            var el = document.getElementById(id);
-            if (!el) return;
-            setTimeout(function () {
-                if (window.bootstrap && bootstrap.Alert) {
-                    bootstrap.Alert.getOrCreateInstance(el).close();
-                } else {
-                    // fallback: hide element
-                    el.classList.remove('show');
-                    el.style.display = 'none';
-                }
-            }, 7000);
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('#flash-success, #flash-error').forEach(alert => {
+                setTimeout(() => {
+                    bootstrap.Alert.getOrCreateInstance(alert).close();
+                }, 7000);
+            });
         });
-    });
     </script>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Supabase Realtime client (UMD) -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.js"></script>
+    <!-- Supabase Realtime Notifications -->
     <script>
         (function () {
-            // Only run when a user is authenticated
             @if(auth()->check())
-                const SUPABASE_URL = '{{ env('SUPABASE_URL', env('SUPABASE_PUBLIC_URL', '')) }}';
-                const SUPABASE_ANON_KEY = '{{ env('SUPABASE_ANON_KEY', env('SUPABASE_KEY', '')) }}';
+                const SUPABASE_URL = '{{ config('services.supabase.url') }}';
+                const SUPABASE_ANON_KEY = '{{ config('services.supabase.key') }}';
                 const userId = '{{ auth()->id() }}';
 
-                if (SUPABASE_URL && SUPABASE_ANON_KEY) {
-                    try {
-                        const supabase = supabase_js.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
 
-                        const channel = supabase.channel(`public:notifications:user:${userId}`)
-                            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, payload => {
-                                const row = payload.new;
-                                // Prepend notification to list
-                                const list = document.getElementById('notif-list');
-                                if (list) {
-                                    const li = document.createElement('li');
-                                    li.className = 'dropdown-item py-2 d-flex justify-content-between align-items-start';
-                                    li.setAttribute('data-notif-id', row.id);
-                                    li.innerHTML = `
-                                        <div>
-                                            <div class="small fw-semibold">${escapeHtml(row.title)}</div>
-                                            <div class="small text-muted">${escapeHtml(row.message?.slice(0,80) ?? '')}</div>
-                                            <div class="small text-muted mt-1">just now</div>
-                                        </div>
-                                        <span class="badge bg-primary align-self-start ms-2">New</span>
-                                    `;
-                                    if (list.firstChild) list.insertBefore(li, list.firstChild);
-                                    else list.appendChild(li);
-                                }
+                const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-                                // Update badge
-                                const badge = document.getElementById('notif-badge');
-                                if (badge) {
-                                    let count = parseInt(badge.textContent || '0', 10) || 0;
-                                    count += 1;
-                                    badge.textContent = count;
-                                    badge.style.display = 'inline-block';
-                                }
-                            })
-                            .subscribe();
+                supabase.channel(`notifications:user:${userId}`)
+                    .on('postgres_changes', {
+                        event: 'INSERT',
+                        schema: 'public',
+                        table: 'notifications',
+                        filter: `user_id=eq.${userId}`
+                    }, (payload) => {
+                        const n = payload.new;
 
-                        // Mark all read handler
-                        document.getElementById('mark-all-notifs')?.addEventListener('click', function (ev) {
-                            ev.preventDefault();
-                            fetch('/api/notifications/mark-all-read', {
-                                method: 'POST',
-                                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
-                            }).then(r => {
-                                if (r.ok) {
-                                    // clear badge and mark items as read visually
-                                    document.getElementById('notif-badge').style.display = 'none';
-                                    document.querySelectorAll('#notif-list [data-notif-id]').forEach(el => {
-                                        const badge = el.querySelector('.badge');
-                                        if (badge) badge.remove();
-                                    });
-                                }
-                            }).catch(()=>{});
-                        });
-                    } catch (e) {
-                        console.error('Supabase realtime init failed', e);
-                    }
+                        // Add to dropdown
+                        const list = document.getElementById('notif-list');
+                        const item = document.createElement('li');
+                        item.className = 'dropdown-item py-3 border-bottom';
+                        item.innerHTML = `
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <div class="fw-semibold small">${escape(n.title)}</div>
+                                    <div class="text-muted small">${escape(n.message?.substring(0,80))}</div>
+                                    <div class="text-muted smaller mt-1">just now</div>
+                                </div>
+                                <span class="badge bg-primary ms-2">New</span>
+                            </div>
+                        `;
+                        list.insertBefore(item, list.firstChild);
+
+                        // Update badge
+                        const badge = document.getElementById('notif-badge') || createBadge();
+                        let count = (parseInt(badge.textContent) || 0) + 1;
+                        badge.textContent = count;
+                        badge.style.display = 'inline-block';
+                    })
+                    .subscribe();
+
+                function createBadge() {
+                    const bell = document.querySelector('[data-bs-toggle="dropdown"] i.fa-bell').parentElement;
+                    const span = document.createElement('span');
+                    span.id = 'notif-badge';
+                    span.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger';
+                    span.style.fontSize = '0.65rem';
+                    bell.style.position = 'relative';
+                    bell.appendChild(span);
+                    return span;
                 }
 
-                function escapeHtml(unsafe) {
-                    return String(unsafe)
+                function escape(str) {
+                    if (!str) return '';
+                    return String(str)
                         .replace(/&/g, '&amp;')
                         .replace(/</g, '&lt;')
                         .replace(/>/g, '&gt;')
                         .replace(/"/g, '&quot;')
                         .replace(/'/g, '&#039;');
                 }
+
+                // Mark all as read
+                document.getElementById('mark-all-notifs')?.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    await fetch('/api/notifications/mark-all-read', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        }
+                    });
+                    document.getElementById('notif-badge')?.remove();
+                    document.querySelectorAll('#notif-list .badge').forEach(b => b.remove());
+                });
             @endif
         })();
     </script>
-    @stack('scripts')
+
+<!-- Tawk.to Live Chat - 100% Working -->
+<script type="text/javascript">
+var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+(function(){
+    var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+    s1.async=true;
+    s1.src='https://embed.tawk.to/691d1d94458429195a03786f/1jacrn3bg';
+    s1.charset='UTF-8';
+    s1.setAttribute('crossorigin','*');
+    s0.parentNode.insertBefore(s1,s0);
+})();
+</script>
 </body>
 </html>

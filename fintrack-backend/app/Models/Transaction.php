@@ -104,4 +104,33 @@ class Transaction extends Model
     {
         return ($this->type === 'expense' ? '-' : '+') . '$' . number_format((float) $this->amount, 2);
     }
+
+    /**
+     * Boot model events to evaluate budgets when transactions change.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::created(function (Transaction $transaction) {
+            try {
+                if ($transaction->user) {
+                    $transaction->user->evaluateBudgetsForTransaction($transaction, 0);
+                }
+            } catch (\Throwable $e) {
+                // swallow to avoid breaking transaction flow; logging could be added
+            }
+        });
+
+        static::updated(function (Transaction $transaction) {
+            try {
+                $original = $transaction->getOriginal('amount') ?? 0;
+                if ($transaction->user) {
+                    $transaction->user->evaluateBudgetsForTransaction($transaction, (float) $original);
+                }
+            } catch (\Throwable $e) {
+                // swallow
+            }
+        });
+    }
 }
