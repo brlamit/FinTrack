@@ -40,8 +40,13 @@ class AuthController extends Controller
         $login = $request->input('login');
         $password = $request->input('password');
 
-        // Check if login is email or username
-        $field = filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+        // Enforce login must be an email
+        if (!filter_var($login, FILTER_VALIDATE_EMAIL)) {
+            throw ValidationException::withMessages([
+            'login' => ['The login must be a valid email address.'],
+            ]);
+        }
+        $field = 'email';
 
         $credentials = [
             $field => $login,

@@ -49,7 +49,7 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'username' => 'required|string', // Can be email or username
+            'email' => 'required|string|email', // Must be a valid email
             'password' => 'required|string',
         ]);
 
@@ -66,9 +66,9 @@ class AuthController extends Controller
         $credentials = $request->only('username', 'password');
 
         // Check if username is email or username
-        $field = filter_var($request->username, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+        $field = filter_var($request->email, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
 
-        if (!Auth::attempt([$field => $request->username, 'password' => $request->password])) {
+        if (!Auth::attempt([$field => $request->email, 'password' => $request->password])) {
             return response()->json([
                 'error' => [
                     'code' => 'INVALID_CREDENTIALS',
