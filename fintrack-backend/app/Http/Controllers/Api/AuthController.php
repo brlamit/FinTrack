@@ -63,7 +63,7 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $credentials = $request->only('username', 'password');
+        $credentials = $request->only('email', 'password');
 
         // Check if username is email or username
         $field = filter_var($request->email, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
