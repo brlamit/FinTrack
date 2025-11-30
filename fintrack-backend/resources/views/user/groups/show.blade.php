@@ -261,10 +261,12 @@
                                 <tr>
                                     <th scope="col">Description</th>
                                     <th scope="col">Type</th>
+                                    <th scope="col">Receipt</th>
                                     <th scope="col">Recorded By</th>
                                     <th scope="col">Category</th>
                                     <th scope="col" class="text-end">Amount</th>
                                     <th scope="col" class="text-end">Date</th>
+                                    <th scope="col"> Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -280,10 +282,45 @@
                                                 {{ $isIncome ? 'Income' : 'Expense' }}
                                             </span>
                                         </td>
+                                        <td>
+                                            @php
+                                                $imgUrl = null;
+                                                $path = $transaction->receipt_path ?? null;
+
+                                                if ($path) {
+                                                    $disk = $transaction->receipt_disk ?? config('filesystems.default');
+
+                                                    // If the path already looks like a URL, use it directly
+                                                    if (\Illuminate\Support\Str::startsWith($path, ['http://', 'https://']) || filter_var($path, FILTER_VALIDATE_URL)) {
+                                                        $imgUrl = $path;
+                                                    } else {
+                                                        try {
+                                                            // Prefer Storage->url when the file exists on the configured disk
+                                                            if (\Illuminate\Support\Facades\Storage::disk($disk)->exists($path)) {
+                                                                $imgUrl = \Illuminate\Support\Facades\Storage::disk($disk)->url($path);
+                                                            } else {
+                                                                $imgUrl = null;
+                                                            }
+                                                        } catch (\Throwable $e) {
+                                                            $imgUrl = null;
+                                                        }
+                                                    }
+                                                }
+                                            @endphp
+
+                                            @if($imgUrl)
+                                                <img src="{{ $imgUrl }}" width="80" height="60" style="object-fit: cover; border-radius: 4px;" alt="{{ $transaction->description ?? 'Receipt Image' }}">
+                                            @else
+                                                <span class="text-muted small">No Image</span>
+                                            @endif
+                                        </td>
                                         <td>{{ $transaction->user->name ?? '—' }}</td>
                                         <td>{{ $transaction->category->name ?? '—' }}</td>
                                         <td class="text-end {{ $isIncome ? 'text-success' : 'text-danger' }}">{{ $currency($transaction->amount) }}</td>
                                         <td class="text-end text-muted small">{{ $date?->format('M d, Y') ?? '—' }}</td>
+                                        <td class="text-end">
+                                            <a href="{{ route('transactions.show', $transaction) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                        </td>
                                     </tr>
                                 @empty
                                     <tr>

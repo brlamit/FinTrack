@@ -51,7 +51,55 @@ class Receipt extends Model
      */
     public function getUrlAttribute()
     {
-        return \Storage::disk('s3')->url($this->path);
+        if (empty($this->path)) {
+            return $this->path;
+        }
+
+        // If the stored path is already a full URL, try to normalize it to include bucket when configured
+        if (strpos($this->path, 'http://') === 0 || strpos($this->path, 'https://') === 0) {
+            $disk = env('FILESYSTEM_DISK', config('filesystems.default'));
+            $diskConfig = config("filesystems.disks.{$disk}", []);
+            $diskUrl = $diskConfig['url'] ?? null;
+            $bucket = $diskConfig['bucket'] ?? env('SUPABASE_PUBLIC_BUCKET');
+
+            if (!empty($diskUrl) && strpos($this->path, $diskUrl) === 0) {
+                $relative = ltrim(substr($this->path, strlen($diskUrl)), '/');
+                if (!empty($bucket) && strpos($relative, trim($bucket, '/')) !== 0) {
+                    $encoded = implode('/', array_map('rawurlencode', explode('/', $relative)));
+                    return rtrim($diskUrl, '/') . '/' . trim($bucket, '/') . '/' . $encoded;
+                }
+            }
+
+            return $this->path;
+        }
+
+        // Path is a storage key; attempt to get a disk url (and ensure bucket included)
+        $disk = env('FILESYSTEM_DISK', config('filesystems.default'));
+        $diskConfig = config("filesystems.disks.{$disk}", []);
+        $diskUrl = $diskConfig['url'] ?? null;
+        $bucket = $diskConfig['bucket'] ?? env('SUPABASE_PUBLIC_BUCKET');
+
+        try {
+            $generated = \Storage::disk($disk)->url($this->path);
+        } catch (\Throwable $e) {
+            $generated = null;
+        }
+
+        // If generated url doesn't include the bucket, rebuild using disk config + bucket
+        if (!empty($generated) && !empty($bucket) && strpos($generated, trim($bucket, '/')) === false) {
+            $generated = null;
+        }
+
+        if (empty($generated) && !empty($diskUrl)) {
+            $encodedKey = implode('/', array_map('rawurlencode', explode('/', $this->path)));
+            if (!empty($bucket)) {
+                $generated = rtrim($diskUrl, '/') . '/' . trim($bucket, '/') . '/' . ltrim($encodedKey, '/');
+            } else {
+                $generated = rtrim($diskUrl, '/') . '/' . ltrim($encodedKey, '/');
+            }
+        }
+
+        return $generated ?: $this->path;
     }
 
     /**

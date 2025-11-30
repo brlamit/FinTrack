@@ -27,9 +27,16 @@ class AvatarUrlResolver
             }
         }
 
-        // 2. Supabase public URL shortcut
-        if ($disk === 'supabase' && env('SUPABASE_PUBLIC_URL')) {
-            return rtrim(env('SUPABASE_PUBLIC_URL'), '/') . '/' . $path;
+        // 2. If disk config has a public URL, build it (include bucket if present)
+        $diskConfig = config("filesystems.disks.{$disk}", []);
+        if (!empty($diskConfig['url'])) {
+            $diskUrl = rtrim($diskConfig['url'], '/');
+            $bucket = $diskConfig['bucket'] ?? env('SUPABASE_PUBLIC_BUCKET');
+            $encoded = implode('/', array_map('rawurlencode', explode('/', ltrim($path, '/'))));
+            if (!empty($bucket)) {
+                return $diskUrl . '/' . trim($bucket, '/') . '/' . $encoded;
+            }
+            return $diskUrl . '/' . $encoded;
         }
 
         // 3. Standard disk URL

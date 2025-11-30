@@ -66,6 +66,26 @@ class Transaction extends Model
     }
 
     /**
+     * Proxy attribute: get receipt path (prefer resolved URL from receipt)
+     */
+    public function getReceiptPathAttribute()
+    {
+        try {
+            return $this->receipt ? $this->receipt->url : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Proxy attribute: get receipt disk (not stored per-receipt; return configured disk)
+     */
+    public function getReceiptDiskAttribute()
+    {
+        return env('FILESYSTEM_DISK', config('filesystems.default'));
+    }
+
+    /**
      * Scope a query to only include income transactions.
      */
     public function scopeIncome($query)
