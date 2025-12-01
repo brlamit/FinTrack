@@ -1,6 +1,7 @@
 import 'package:fintrack_frontend/models/screens/login_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:fintrack_frontend/services/api_service.dart';
+import 'package:fintrack_frontend/models/screens/verify_otp_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -13,6 +14,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final name = TextEditingController();
   final email = TextEditingController();
   final password = TextEditingController();
+  final confirmPassword = TextEditingController();
   final username = TextEditingController();
   bool loading = false;
 
@@ -20,29 +22,31 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() => loading = true);
 
     try {
-      final res =
-          await Supabase.instance.client.auth.signUp(
-        email: email.text.trim(),
-        password: password.text.trim(),
-        data: {
-          'name': name.text,
-          'username': username.text,
-        },
-      );
+      // Call API register — backend should send a verification code to email
+      final payload = {
+        'name': name.text.trim(),
+        'email': email.text.trim(),
+        'password': password.text,
+        'password_confirmation': confirmPassword.text,
+        // 'username': username.text.trim(),
+      };
 
-      if (res.user != null) {
-        Navigator.push(
-          // ignore: use_build_context_synchronously
+      final ok = await ApiService.register(payload);
+
+      if (ok) {
+        // Open OTP verification screen (it redirects to home after successful verify)
+        // ignore: use_build_context_synchronously
+        Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => LoginScreen(),
+            builder: (_) => VerifyOtpScreen(email: email.text.trim()),
           ),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Signup Failed: $e")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Signup Failed: $e")));
     }
 
     setState(() => loading = false);
@@ -57,19 +61,35 @@ class _SignupScreenState extends State<SignupScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              TextField(controller: name, decoration: const InputDecoration(labelText: "Full Name")),
+              TextField(
+                controller: name,
+                decoration: const InputDecoration(labelText: "Full Name"),
+              ),
               const SizedBox(height: 10),
-              TextField(controller: username, decoration: const InputDecoration(labelText: "Username")),
+              TextField(
+                controller: email,
+                decoration: const InputDecoration(labelText: "Email"),
+              ),
               const SizedBox(height: 10),
-              TextField(controller: email, decoration: const InputDecoration(labelText: "Email")),
+              TextField(
+                controller: password,
+                decoration: const InputDecoration(labelText: "Password"),
+              ),
               const SizedBox(height: 10),
-              TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: "Password")),
+              TextField(
+                controller: confirmPassword,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: "Confirm Password",
+                ),
+              ),
               const SizedBox(height: 20),
 
               ElevatedButton(
                 onPressed: loading ? null : signup,
-                child: loading ? const CircularProgressIndicator() : const Text("Create Account"),
-                
+                child: loading
+                    ? const CircularProgressIndicator()
+                    : const Text("Create Account"),
               ),
             ],
           ),

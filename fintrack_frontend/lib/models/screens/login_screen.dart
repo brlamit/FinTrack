@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fintrack_frontend/services/api_service.dart';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -21,8 +22,10 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final success =
-          await ApiService.login(_emailCtrl.text.trim(), _passwordCtrl.text);
+      final success = await ApiService.login(
+        _emailCtrl.text.trim(),
+        _passwordCtrl.text,
+      );
 
       if (success) {
         Navigator.pushReplacementNamed(context, '/home'); //  Go to Home
@@ -51,7 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   blurRadius: 10,
                   color: Colors.black12,
                   offset: Offset(0, 4),
-                )
+                ),
               ],
             ),
             child: Column(
@@ -71,7 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextField(
                   controller: _emailCtrl,
                   decoration: const InputDecoration(
-                    labelText: "Email or Username",
+                    labelText: "Email ",
                     prefixIcon: Icon(Icons.person),
                     border: OutlineInputBorder(),
                   ),
@@ -92,10 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 10),
 
                 if (_error != null)
-                  Text(
-                    _error!,
-                    style: const TextStyle(color: Colors.red),
-                  ),
+                  Text(_error!, style: const TextStyle(color: Colors.red)),
 
                 const SizedBox(height: 20),
 
@@ -105,7 +105,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     backgroundColor: Colors.blue,
                     minimumSize: const Size(double.infinity, 50),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: _loading
                       ? const CircularProgressIndicator(color: Colors.white)
