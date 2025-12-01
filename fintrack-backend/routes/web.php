@@ -115,6 +115,8 @@ Route::middleware(['auth'])->group(function () {
     // User transactions
     Route::get('/transactions', [UserController::class, 'transactions'])->name('user.transactions');
     Route::get('/transactions/create', [UserController::class, 'createTransaction'])->name('user.transactions.create');
+    // Web view for single transaction
+    Route::get('/transactions/{transaction}/view', [\App\Http\Controllers\Web\TransactionController::class, 'show'])->name('user.transaction.show');
     Route::post('/transactions', [UserController::class, 'storeTransaction'])->name('user.transactions.store');
 
     // User budgets
@@ -123,6 +125,7 @@ Route::middleware(['auth'])->group(function () {
     // User groups
     Route::get('/groups', [UserController::class, 'groups'])->name('user.groups');
     Route::get('/groups/{group}', [UserController::class, 'group'])->name('user.group');
+    Route::get('/groups/{group}/transactions', [UserController::class, 'groupTransactions'])->name('user.group.transactions');
     Route::post('/groups', [\App\Http\Controllers\GroupController::class, 'store'])->name('user.groups.store');
     Route::delete('/groups/{group}', [\App\Http\Controllers\GroupController::class, 'destroy'])->name('user.groups.destroy');
     // Add expense (split) from web form

@@ -1147,11 +1147,44 @@ class UserController extends Controller
             ->get()
             ->keyBy('user_id');
 
+        // Recent transactions (limit to latest 7 for display in group show page)
+        $recentTransactions = $group->sharedTransactions()
+            ->with('user', 'category')
+            ->orderByDesc(DB::raw('COALESCE(transaction_date, created_at)'))
+            ->limit(7)
+            ->get();
+
+        $hasMoreTransactions = $transactionCount > $recentTransactions->count();
+
         return view('user.groups.show', [
             'group' => $group,
             'groupTotals' => $groupTotals,
             'transactionMetrics' => $transactionMetrics,
             'memberStats' => $memberStats,
+            'recentTransactions' => $recentTransactions,
+            'hasMoreTransactions' => $hasMoreTransactions,
+        ]);
+    }
+
+    /**
+     * Show all transactions for a specific group (web view)
+     */
+    public function groupTransactions(Group $group)
+    {
+        $userId = auth()->id();
+
+        if (! $group->members()->where('user_id', $userId)->exists()) {
+            abort(403, 'Unauthorized');
+        }
+
+        $transactions = $group->sharedTransactions()
+            ->with('user', 'category')
+            ->orderByDesc(DB::raw('COALESCE(transaction_date, created_at)'))
+            ->paginate(20);
+
+        return view('user.groups.transactions', [
+            'group' => $group,
+            'transactions' => $transactions,
         ]);
     }
 
