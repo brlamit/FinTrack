@@ -78,20 +78,38 @@ class User extends Authenticatable
      */
    // Smart Avatar URL — works with Supabase + local fallback
    // app/Models/User.php
-public function getAvatarAttribute($value)
-{
-    if (!$value || $value === 'default.png') {
-        return asset('assets/uploads/images/default.png');
+    public function getAvatarAttribute($value)
+    {
+        if (!$value || $value === 'default.png') {
+            return asset('assets/uploads/images/default.png');
+        }
+
+        $disk = $this->avatar_disk ?? 'public';
+
+        // If the stored value is already a full URL return it
+        if (strpos($value, 'http://') === 0 || strpos($value, 'https://') === 0) {
+            return $value;
+        }
+
+        // If disk has a configured public URL and bucket, build full URL including bucket
+        $diskConfig = config("filesystems.disks.{$disk}", []);
+        if (!empty($diskConfig['url'])) {
+            $diskUrl = rtrim($diskConfig['url'], '/');
+            $bucket = $diskConfig['bucket'] ?? env('SUPABASE_PUBLIC_BUCKET');
+            $encoded = implode('/', array_map('rawurlencode', explode('/', ltrim($value, '/'))));
+            if (!empty($bucket)) {
+                return $diskUrl . '/' . trim($bucket, '/') . '/' . $encoded;
+            }
+            return $diskUrl . '/' . $encoded;
+        }
+
+        // Fallback to Storage disk url
+        try {
+            return Storage::disk($disk)->url($value);
+        } catch (\Throwable $e) {
+            return $value;
+        }
     }
-
-    $disk = $this->avatar_disk ?? 'public';
-
-    if ($disk === 'supabase') {
-        return env('SUPABASE_PUBLIC_URL') . '/' . ltrim($value, '/');
-    }
-
-    return Storage::disk($disk)->url($value);
-}
 
     /**
      * Helper: Raw avatar path (without accessor)

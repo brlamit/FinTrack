@@ -67,11 +67,24 @@ class ReceiptController extends Controller
         $filename = Str::uuid() . '_' . $request->filename;
         $path = 'receipts/' . auth()->id() . '/' . $filename;
 
-        $presignedUrl = Storage::disk('s3')->temporaryUrl(
-            $path,
-            now()->addMinutes(15),
-            ['PutObject', 'PutObjectAcl']
-        );
+        // Validate configured disk exists, fallback to 'public'
+        $disk = config('filesystems.default');
+        $disks = array_keys(config('filesystems.disks', []));
+        if (!in_array($disk, $disks, true)) {
+            $disk = 'public';
+        }
+
+        // Generate a presigned URL if supported by disk, otherwise return a storage key
+        try {
+            $presignedUrl = Storage::disk($disk)->temporaryUrl(
+                $path,
+                now()->addMinutes(15),
+                ['PutObject', 'PutObjectAcl']
+            );
+        } catch (\Throwable $e) {
+            // Some adapters may not support temporaryUrl; return the storage key instead
+            $presignedUrl = null;
+        }
 
         return response()->json([
             'success' => true,
@@ -103,12 +116,54 @@ class ReceiptController extends Controller
             ], 422);
         }
 
-        // Verify file exists in S3
-        if (!Storage::disk('s3')->exists($request->key)) {
+        // Determine disk from env or config and verify file exists
+        $disk = env('FILESYSTEM_DISK', config('filesystems.default'));
+        $disks = array_keys(config('filesystems.disks', []));
+        if (!in_array($disk, $disks, true)) {
+            $disk = config('filesystems.default');
+            if (!in_array($disk, $disks, true)) {
+                $disk = 'public';
+            }
+        }
+
+        if (!Storage::disk($disk)->exists($request->key)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Uploaded file not found',
             ], 404);
+        }
+
+        // Attempt to generate a public URL from the disk. If not possible, build from disk config url.
+        $pathToSave = $request->key;
+        $generated = null;
+        try {
+            $generated = Storage::disk($disk)->url($request->key);
+        } catch (\Throwable $e) {
+            $generated = null;
+        }
+
+        $diskConfig = config("filesystems.disks.{$disk}", []);
+        $diskUrl = $diskConfig['url'] ?? null;
+        $bucket = $diskConfig['bucket'] ?? env('SUPABASE_PUBLIC_BUCKET');
+
+        // If Storage returned a URL but it's missing the bucket segment, prefer constructing
+        // a URL that includes the bucket when we have the bucket configured.
+        if (!empty($generated) && !empty($bucket) && strpos($generated, trim($bucket, '/')) === false) {
+            $generated = null; // force rebuild below
+        }
+
+        if (empty($generated) && !empty($diskUrl)) {
+            // URL-encode each segment of the key to handle spaces and special chars
+            $encodedKey = implode('/', array_map('rawurlencode', explode('/', $request->key)));
+            if (!empty($bucket)) {
+                $generated = rtrim($diskUrl, '/') . '/' . trim($bucket, '/') . '/' . ltrim($encodedKey, '/');
+            } else {
+                $generated = rtrim($diskUrl, '/') . '/' . ltrim($encodedKey, '/');
+            }
+        }
+
+        if (!empty($generated)) {
+            $pathToSave = $generated;
         }
 
         $receipt = Receipt::create([
@@ -116,7 +171,7 @@ class ReceiptController extends Controller
             'filename' => basename($request->key),
             'original_filename' => $request->original_filename,
             'mime_type' => $request->mime_type,
-            'path' => $request->key,
+            'path' => $pathToSave,
             'size' => $request->size,
             'processed' => false,
         ]);
@@ -163,11 +218,25 @@ class ReceiptController extends Controller
             ], 404);
         }
 
-        $url = Storage::disk('s3')->temporaryUrl(
-            $receipt->path,
-            now()->addMinutes(5),
-            ['GetObject']
-        );
+        // Use the model accessor which normalizes the URL (includes bucket when configured)
+        $url = $receipt->url;
+        // If the stored value is not a full URL, try to generate a temporary URL from the configured disk
+        if (!(strpos($url, 'http://') === 0 || strpos($url, 'https://') === 0)) {
+            $disk = env('FILESYSTEM_DISK', config('filesystems.default'));
+            try {
+                $url = Storage::disk($disk)->temporaryUrl(
+                    $receipt->path,
+                    now()->addMinutes(5),
+                    ['GetObject']
+                );
+            } catch (\Throwable $e) {
+                try {
+                    $url = Storage::disk($disk)->url($receipt->path);
+                } catch (\Throwable $e) {
+                    $url = $receipt->path;
+                }
+            }
+        }
 
         return response()->json([
             'success' => true,
@@ -232,8 +301,24 @@ class ReceiptController extends Controller
             ], 404);
         }
 
-        // Delete file from S3
-        Storage::disk('s3')->delete($receipt->path);
+        // Delete file from configured disk when possible
+        $disk = config('filesystems.default');
+
+        try {
+            if (strpos($receipt->path, 'http://') === 0 || strpos($receipt->path, 'https://') === 0) {
+                // Try to derive the storage key by stripping the disk url prefix
+                $diskUrl = config("filesystems.disks.{$disk}.url");
+                if (!empty($diskUrl) && strpos($receipt->path, $diskUrl) === 0) {
+                    $maybeKey = ltrim(substr($receipt->path, strlen($diskUrl)), '/');
+                    Storage::disk($disk)->delete($maybeKey);
+                }
+                // If we couldn't derive a key, skip deletion of remote object
+            } else {
+                Storage::disk($disk)->delete($receipt->path);
+            }
+        } catch (\Throwable $e) {
+            // ignore deletion errors
+        }
 
         $receipt->delete();
 

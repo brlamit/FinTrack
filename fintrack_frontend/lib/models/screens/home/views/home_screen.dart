@@ -1,12 +1,12 @@
 import 'dart:math';
 
 import 'package:expense_repository/expense_repository.dart';
-import 'package:expenses_tracker/screens/add_expense/blocs/create_categorybloc/create_category_bloc.dart';
-import 'package:expenses_tracker/screens/add_expense/blocs/get_categories_bloc/get_categories_bloc.dart';
-import 'package:expenses_tracker/screens/add_expense/views/add_expense.dart';
-import 'package:expenses_tracker/screens/home/blocs/get_expenses_bloc/get_expenses_bloc.dart';
-import 'package:expenses_tracker/screens/home/views/main_screen.dart';
-import 'package:expenses_tracker/screens/stats/stats.dart';
+import '../../add_expense/blocs/create_categorybloc/create_category_bloc.dart';
+import '../../add_expense/blocs/get_categories_bloc/get_categories_bloc.dart';
+import '../../add_expense/views/add_expense.dart';
+import '../blocs/get_expenses_bloc/get_expenses_bloc.dart';
+import 'main_screen.dart';
+import '../../stats/stats.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -27,17 +27,17 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<GetExpensesBloc, GetExpensesState>(
-        builder: (context, state) {
-      if (state is GetExpensesSuccess) {
-        return Scaffold(
-          backgroundColor: Colors.grey[100],
-          // appBar: AppBar(),
-          // bottomNavBar
-          bottomNavigationBar: ClipRRect(
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(30),
-            ),
-            child: BottomNavigationBar(
+      builder: (context, state) {
+        if (state is GetExpensesSuccess) {
+          return Scaffold(
+            backgroundColor: Colors.grey[100],
+            // appBar: AppBar(),
+            // bottomNavBar
+            bottomNavigationBar: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(30),
+              ),
+              child: BottomNavigationBar(
                 onTap: (value) {
                   setState(() {
                     index = value;
@@ -63,68 +63,68 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     label: "Stats",
                   ),
-                ]),
-          ),
-          floatingActionButtonLocation:
-              FloatingActionButtonLocation.centerDocked,
-          floatingActionButton: FloatingActionButton(
-            shape: const CircleBorder(),
-            onPressed: () async {
-              var newExpense = await Navigator.push(
-                context,
-                MaterialPageRoute<Expense>(
-                  builder: (context) => MultiBlocProvider(
-                    providers: [
-                      BlocProvider(
-                        create: (context) =>
-                            CreateCategoryBloc(FirebaseExpenseRepo()),
-                      ),
-                      BlocProvider(
-                        create: (context) =>
-                            CreateExpenseBloc(FirebaseExpenseRepo()),
-                      ),
-                      BlocProvider(
-                        create: (context) =>
-                            GetCategoriesBloc(FirebaseExpenseRepo())
-                              ..add(GetCategories()),
-                      ),
+                ],
+              ),
+            ),
+            floatingActionButtonLocation:
+                FloatingActionButtonLocation.centerDocked,
+            floatingActionButton: FloatingActionButton(
+              shape: const CircleBorder(),
+              onPressed: () async {
+                var newExpense = await Navigator.push(
+                  context,
+                  MaterialPageRoute<Expense>(
+                    builder: (context) => MultiBlocProvider(
+                      providers: [
+                        BlocProvider(
+                          create: (context) =>
+                              CreateCategoryBloc(FirebaseExpenseRepo()),
+                        ),
+                        BlocProvider(
+                          create: (context) =>
+                              CreateExpenseBloc(FirebaseExpenseRepo()),
+                        ),
+                        BlocProvider(
+                          create: (context) =>
+                              GetCategoriesBloc(FirebaseExpenseRepo())
+                                // ..add(GetCategories()),
+                        ),
+                      ],
+                      child: const AddExpense(),
+                    ),
+                  ),
+                );
+                if (newExpense != null) {
+                  setState(() {
+                    state.expenses.insert(0, newExpense);
+                  });
+                }
+              },
+              child: Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      Theme.of(context).colorScheme.tertiary,
+                      Theme.of(context).colorScheme.secondary,
+                      Theme.of(context).colorScheme.primary,
                     ],
-                    child: const AddExpense(),
+                    transform: const GradientRotation(pi / 4),
                   ),
                 ),
-              );
-              if (newExpense != null) {
-                setState(() {
-                  state.expenses.insert(0, newExpense);
-                });
-              }
-            },
-            child: Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [
-                    Theme.of(context).colorScheme.tertiary,
-                    Theme.of(context).colorScheme.secondary,
-                    Theme.of(context).colorScheme.primary,
-                  ],
-                  transform: const GradientRotation(pi / 4),
-                ),
+                child: const Icon(CupertinoIcons.add),
               ),
-              child: const Icon(CupertinoIcons.add),
             ),
-          ),
-          body: index == 0 ? MainScreen(state.expenses) : const StatScreen(),
-        );
-      } else {
-        return const Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(),
-          ),
-        );
-      }
-    });
+            body: index == 0 ? MainScreen(state.expenses) : const StatScreen(),
+          );
+        } else {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+      },
+    );
   }
 }

@@ -12,12 +12,20 @@ class ApiService {
 
   static SupabaseClient get _supabase => Supabase.instance.client;
 
+  // Optional override for backend base (useful for testing on physical devices)
+  // Example: ApiService.debugBackendOverride = 'http://192.168.1.42:8000/api';
+  static String? debugBackendOverride;
+
   // Backend API base (select per platform). Examples:
   // - Web: http://localhost:8000/api
   // - Android emulator (Android Studio): http://10.0.2.2:8000/api
   // - Genymotion: http://10.0.3.2:8000/api
   // - iOS simulator: http://127.0.0.1:8000/api (on macOS)
   static String get backendBaseUrl {
+    if (debugBackendOverride != null && debugBackendOverride!.isNotEmpty) {
+      return debugBackendOverride!;
+    }
+
     if (kIsWeb) return 'http://localhost:8000/api';
     try {
       if (Platform.isAndroid) return 'http://10.0.2.2:8000/api';
@@ -60,7 +68,7 @@ class ApiService {
       final resp = await http.post(
         uri,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'username': emailOrUsername, 'password': password}),
+        body: jsonEncode({'email': emailOrUsername, 'password': password}),
       );
 
       if (resp.statusCode == 200 || resp.statusCode == 201) {
@@ -82,9 +90,30 @@ class ApiService {
         return true;
       }
 
-      // Handle validation or auth errors
-      final err = resp.body.isNotEmpty ? resp.body : 'Login failed';
-      throw Exception('Login failed: HTTP ${resp.statusCode} - $err');
+      // Handle validation or auth errors — try to extract structured error
+      String errMsg = 'Login failed: HTTP ${resp.statusCode}';
+      if (resp.body.isNotEmpty) {
+        try {
+          final parsed = jsonDecode(resp.body);
+          if (parsed is Map && parsed['error'] != null) {
+            final e = parsed['error'];
+            if (e is String)
+              errMsg = '$errMsg - $e';
+            else if (e is Map && e['message'] != null)
+              errMsg = '$errMsg - ${e['message']}';
+            else
+              errMsg = '$errMsg - ${resp.body}';
+          } else if (parsed is Map && parsed['message'] != null) {
+            errMsg = '$errMsg - ${parsed['message']}';
+          } else {
+            errMsg = '$errMsg - ${resp.body}';
+          }
+        } catch (_) {
+          errMsg = '$errMsg - ${resp.body}';
+        }
+      }
+
+      throw Exception(errMsg);
     } catch (e) {
       throw Exception('Login failed: $e');
     }
@@ -124,6 +153,63 @@ class ApiService {
       throw Exception('Register failed: HTTP ${resp.statusCode} - $err');
     } catch (e) {
       throw Exception('Register failed: $e');
+    }
+  }
+
+  // -------------------------
+  // OTP VERIFY / RESEND (API)
+  // -------------------------
+  static Future<bool> verifyOtp(String email, String code) async {
+    try {
+      final uri = Uri.parse('$backendBaseUrl/auth/otp/verify');
+      final resp = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'code': code}),
+      );
+
+      if (resp.statusCode == 200 || resp.statusCode == 201) {
+        // Optionally backend may return user/token after verification
+        if (resp.body.isNotEmpty) {
+          try {
+            final body = jsonDecode(resp.body);
+            if (body['token'] != null) {
+              token = body['token'] as String?;
+              if (token != null) await _prefs?.setString('token', token!);
+            }
+
+            if (body['user'] != null) {
+              currentUser = Map<String, dynamic>.from(body['user']);
+              await _prefs?.setString('user', jsonEncode(currentUser));
+            }
+          } catch (_) {}
+        }
+
+        return true;
+      }
+
+      final err = resp.body.isNotEmpty ? resp.body : 'OTP verify failed';
+      throw Exception('OTP verify failed: HTTP ${resp.statusCode} - $err');
+    } catch (e) {
+      throw Exception('OTP verify failed: $e');
+    }
+  }
+
+  static Future<bool> resendOtp(String email) async {
+    try {
+      final uri = Uri.parse('$backendBaseUrl/auth/otp/resend');
+      final resp = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+
+      if (resp.statusCode == 200 || resp.statusCode == 201) return true;
+
+      final err = resp.body.isNotEmpty ? resp.body : 'Resend OTP failed';
+      throw Exception('Resend OTP failed: HTTP ${resp.statusCode} - $err');
+    } catch (e) {
+      throw Exception('Resend OTP failed: $e');
     }
   }
 
@@ -210,7 +296,7 @@ class ApiService {
   static Future<void> logout() async {
     try {
       if (token != null) {
-        final uri = Uri.parse('$backendBaseUrl/auth/logout');
+        final uri = Uri.parse('$backendBaseUrl/auth/logout-all');
         await http.post(
           uri,
           headers: {
@@ -251,6 +337,84 @@ class ApiService {
       ];
     } catch (e) {
       throw Exception('Failed to load groups: $e');
+    }
+  }
+
+  // -------------------------
+  // DASHBOARD (aggregate data used by web dashboard)
+  // -------------------------
+  static Future<Map<String, dynamic>> fetchDashboard() async {
+    try {
+      final headers = <String, String>{'Content-Type': 'application/json'};
+      if (token != null && token!.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      // Fetch statistics/totals
+      final statsResp = await http.get(
+        Uri.parse('$backendBaseUrl/transactions/statistics'),
+        headers: headers,
+      );
+
+      Map<String, dynamic>? stats;
+      if (statsResp.statusCode == 200 && statsResp.body.isNotEmpty) {
+        try {
+          stats = Map<String, dynamic>.from(jsonDecode(statsResp.body));
+        } catch (_) {}
+      }
+
+      // Fetch insights
+      final insightsResp = await http.get(
+        Uri.parse('$backendBaseUrl/insights'),
+        headers: headers,
+      );
+      List<dynamic>? insights;
+      if (insightsResp.statusCode == 200 && insightsResp.body.isNotEmpty) {
+        try {
+          insights = List<dynamic>.from(jsonDecode(insightsResp.body));
+        } catch (_) {}
+      }
+
+      // Fetch recent transactions (server returns newest first)
+      final txResp = await http.get(
+        Uri.parse('$backendBaseUrl/transactions'),
+        headers: headers,
+      );
+      List<dynamic>? transactions;
+      if (txResp.statusCode == 200 && txResp.body.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(txResp.body);
+          if (decoded is List)
+            transactions = decoded;
+          else if (decoded is Map && decoded['data'] != null)
+            transactions = List<dynamic>.from(decoded['data']);
+        } catch (_) {}
+      }
+
+      // Fetch budgets
+      final budResp = await http.get(
+        Uri.parse('$backendBaseUrl/budgets'),
+        headers: headers,
+      );
+      List<dynamic>? budgets;
+      if (budResp.statusCode == 200 && budResp.body.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(budResp.body);
+          if (decoded is List)
+            budgets = decoded;
+          else if (decoded is Map && decoded['data'] != null)
+            budgets = List<dynamic>.from(decoded['data']);
+        } catch (_) {}
+      }
+
+      return {
+        'statistics': stats,
+        'insights': insights,
+        'transactions': transactions,
+        'budgets': budgets,
+      };
+    } catch (e) {
+      throw Exception('Failed to fetch dashboard: $e');
     }
   }
 

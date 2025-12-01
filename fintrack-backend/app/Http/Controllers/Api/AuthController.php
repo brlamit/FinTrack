@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Sanctum\PersonalAccessToken;
+use App\Services\OtpService;
+use App\Notifications\OtpNotification;
 
 class AuthController extends Controller
 {
@@ -38,18 +40,28 @@ class AuthController extends Controller
             'phone' => $request->phone,
         ]);
 
-        $token = $user->createToken('mobile-app')->plainTextToken;
+        // Generate registration OTP and notify user (API flow)
+        try {
+            /** @var OtpService $otpService */
+            $otpService = app(OtpService::class);
+            $otp = $otpService->generate($user, 'registration');
+            $user->notify(new OtpNotification($otp->code, 'registration'));
+        } catch (Throwable $e) {
+            // If OTP generation/notification fails, log but continue
+            logger()->error('Failed to generate/send OTP: ' . $e->getMessage());
+        }
 
+        // For API registration we don't immediately issue a session token — user must verify OTP first.
         return response()->json([
+            'message' => 'OTP sent',
             'user' => $user,
-            'token' => $token
         ], 201);
     }
 
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'username' => 'required|string', // Can be email or username
+            'email' => 'required|string|email', // Must be a valid email
             'password' => 'required|string',
         ]);
 
@@ -63,12 +75,12 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $credentials = $request->only('username', 'password');
+        $credentials = $request->only('email', 'password');
 
         // Check if username is email or username
-        $field = filter_var($request->username, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+        $field = filter_var($request->email, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
 
-        if (!Auth::attempt([$field => $request->username, 'password' => $request->password])) {
+        if (!Auth::attempt([$field => $request->email, 'password' => $request->password])) {
             return response()->json([
                 'error' => [
                     'code' => 'INVALID_CREDENTIALS',

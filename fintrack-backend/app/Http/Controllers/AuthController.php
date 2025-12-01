@@ -40,8 +40,13 @@ class AuthController extends Controller
         $login = $request->input('login');
         $password = $request->input('password');
 
-        // Check if login is email or username
-        $field = filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+        // Enforce login must be an email
+        if (!filter_var($login, FILTER_VALIDATE_EMAIL)) {
+            throw ValidationException::withMessages([
+            'login' => ['The login must be a valid email address.'],
+            ]);
+        }
+        $field = 'email';
 
         $credentials = [
             $field => $login,
@@ -153,7 +158,7 @@ class AuthController extends Controller
             'first_login_done' => true,
         ]);
 
-        return redirect()->route('user.dashboard')
+        return redirect()->route('auth.login')
             ->with('success', 'Password set successfully! You can now access your dashboard.');
     }
 
@@ -170,13 +175,23 @@ class AuthController extends Controller
      */
     public function sendResetLink(Request $request)
     {
-        $request->validate(['email' => 'required|email']);
+        // Support invoking forgot-password from the security page when user is logged in
+        $email = $request->input('email');
+        if (!$email && $request->user()) {
+            $email = $request->user()->email;
+        }
 
-        $user = User::where('email', $request->email)->first();
+        // Generic response to avoid revealing account existence
+        $genericStatus = 'If that email address is in our system, we have sent a password reset link.';
+
+        if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return back()->with('status', $genericStatus);
+        }
+
+        $user = User::where('email', $email)->first();
 
         if (!$user) {
-            // Don't reveal if email exists for security
-            return back()->with('status', 'If that email address is in our system, we have sent a password reset link.');
+            return back()->with('status', $genericStatus);
         }
 
         $otp = $this->otpService->generate($user, 'password_reset');
@@ -242,12 +257,16 @@ class AuthController extends Controller
             'password_changed_at' => now(),
         ]);
 
-    Session::forget(['password_reset.email', 'password_reset.verified']);
+        // Clear password reset session data
+        Session::forget(['password_reset.email', 'password_reset.verified']);
 
-        Auth::login($user);
+        // If the user was logged in during the reset flow, log them out to require re-authentication
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
-        return redirect()->route('user.dashboard')
-            ->with('success', 'Password reset successfully!');
+        return redirect()->route('auth.login')
+            ->with('success', 'Password reset successfully! Please log in with your new password.');
     }
 
     /**

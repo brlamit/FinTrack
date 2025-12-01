@@ -17,6 +17,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
@@ -466,6 +467,11 @@ class UserController extends Controller
         // Handle avatar if uploaded
         if ($request->hasFile('avatar')) {
             $this->uploadAvatar($request->file('avatar'), $user);
+            // The validated array contains the UploadedFile under 'avatar' — remove it so
+            // we don't overwrite the saved avatar URL/path in the DB with the tmp path.
+            if (array_key_exists('avatar', $validated)) {
+                unset($validated['avatar']);
+            }
         }
 
         $user->update($validated);
@@ -477,7 +483,7 @@ class UserController extends Controller
     /**
      * AJAX-only: Update avatar from profile page (click-to-upload)
      */
-  public function updateAvatar(Request $request)
+    public function updateAvatar(Request $request)
 {
     $request->validate([
         'avatar' => 'required|image|mimes:jpeg,png,jpg,webp,gif|max:8192',
@@ -486,33 +492,99 @@ class UserController extends Controller
     $user = $request->user();
     $file = $request->file('avatar');
 
-    // Delete old avatar
+    // Delete old avatar (handle stored URL or storage key)
     $oldPath = $user->getRawOriginal('avatar');
     $oldDisk = $user->getRawOriginal('avatar_disk') ?? 'public';
 
     if ($oldPath && $oldPath !== 'default.png') {
         try {
-            Storage::disk($oldDisk)->delete($oldPath);
+            if (strpos($oldPath, 'http://') === 0 || strpos($oldPath, 'https://') === 0) {
+                $diskUrl = config("filesystems.disks.{$oldDisk}.url");
+                if (!empty($diskUrl) && strpos($oldPath, $diskUrl) === 0) {
+                    $maybeKey = ltrim(substr($oldPath, strlen($diskUrl)), '/');
+                    Storage::disk($oldDisk)->delete($maybeKey);
+                }
+                // otherwise skip deletion since we can't derive a key
+            } else {
+                Storage::disk($oldDisk)->delete($oldPath);
+            }
         } catch (\Throwable $e) {
-            // Ignore if already deleted
+            // Ignore if already deleted or deletion failed
         }
     }
 
-    // Upload new avatar to Supabase
-    $filename = $user->id . '_' . Str::random(20) . '.' . $file->extension();
-    $path = $file->storeAs("avatars/{$user->id}", $filename, 'supabase');
-
-    // Make sure it's public
-    try {
-        Storage::disk('supabase')->setVisibility($path, 'public');
-    } catch (\Throwable $e) {
-        // Usually already public due to bucket policy
+    // Determine which disk to use for avatars (allow overriding via AVATAR_DISK env)
+    $disk = env('AVATAR_DISK', config('filesystems.default'));
+    $available = array_keys(config('filesystems.disks', []));
+    if (!in_array($disk, $available, true)) {
+        // fallback to configured default disk, then 'public'
+        $disk = config('filesystems.default');
+        if (!in_array($disk, $available, true)) {
+            $disk = 'public';
+        }
     }
 
-    // Save path + disk
+    // Upload new avatar to configured disk
+    $filename = $user->id . '_' . Str::random(20) . '.' . $file->extension();
+    try {
+        $imagePath = $file->storeAs("avatars/{$user->id}", $filename, $disk);
+    } catch (\Throwable $e) {
+        Log::error('Avatar upload failed: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Avatar upload failed. Check logs.'
+        ], 500);
+    }
+
+    if ($imagePath === false || $imagePath === null) {
+        Log::error('Avatar upload returned false/null for disk: ' . $disk);
+        return response()->json([
+            'success' => false,
+            'message' => 'Avatar upload failed. Check logs.'
+        ], 500);
+    }
+
+    // Make sure it's public if the disk supports visibility
+    try {
+        Storage::disk($disk)->setVisibility($imagePath, 'public');
+    } catch (\Throwable $e) {
+        // Ignore - some disks or buckets are already public or don't support visibility
+    }
+
+    // save object key and the public URL (include bucket in the public URL when available)
+    $avatarToSave = $imagePath;
+    $diskConfig = config("filesystems.disks.{$disk}", []);
+    $generated = null;
+    try {
+        $generated = Storage::disk($disk)->url($imagePath);
+    } catch (\Throwable $e) {
+        $generated = null;
+    }
+
+    $bucket = $diskConfig['bucket'] ?? null;
+    // If generated URL exists but is missing the bucket, discard it so we can build one that includes the bucket
+    if (!empty($generated) && !empty($bucket) && strpos($generated, trim($bucket, '/')) === false) {
+        $generated = null;
+    }
+
+    if (empty($generated) && !empty($diskConfig['url'])) {
+        $diskUrl = rtrim($diskConfig['url'], '/');
+        $encodedKey = implode('/', array_map('rawurlencode', explode('/', $imagePath)));
+        if (!empty($bucket)) {
+            $generated = $diskUrl . '/' . trim($bucket, '/') . '/' . ltrim($encodedKey, '/');
+        } else {
+            $generated = $diskUrl . '/' . ltrim($encodedKey, '/');
+        }
+    }
+
+    if (!empty($generated)) {
+        $avatarToSave = $generated;
+    }
+
+    // Save avatar (URL or key) + disk
     $user->update([
-        'avatar'      => $path,
-        'avatar_disk' => 'supabase',
+        'avatar'      => $avatarToSave,
+        'avatar_disk' => $disk,
     ]);
 
     return response()->json([
@@ -527,27 +599,99 @@ class UserController extends Controller
      */
     private function uploadAvatar($file, $user)
     {
-        $disk = env('AVATAR_DISK', 'public'); // = supabase
+        $disk = env('AVATAR_DISK', config('filesystems.default'));
+        $available = array_keys(config('filesystems.disks', []));
+        if (!in_array($disk, $available, true)) {
+            $disk = config('filesystems.default');
+            if (!in_array($disk, $available, true)) {
+                $disk = 'public';
+            }
+        }
 
-        // Delete old avatar
+        // Delete old avatar (if present) - handle stored URL or storage key
         $oldPath = $user->getRawOriginal('avatar');
         $oldDisk = $user->getRawOriginal('avatar_disk') ?? $disk;
+        if (!in_array($oldDisk, $available, true)) {
+            $oldDisk = $disk;
+        }
 
-        if ($oldPath && Storage::disk($oldDisk)->exists($oldPath)) {
-            Storage::disk($oldDisk)->delete($oldPath);
+        try {
+            if ($oldPath) {
+                if (strpos($oldPath, 'http://') === 0 || strpos($oldPath, 'https://') === 0) {
+                    $diskUrl = config("filesystems.disks.{$oldDisk}.url");
+                    if (!empty($diskUrl) && strpos($oldPath, $diskUrl) === 0) {
+                        $maybeKey = ltrim(substr($oldPath, strlen($diskUrl)), '/');
+                        if (Storage::disk($oldDisk)->exists($maybeKey)) {
+                            Storage::disk($oldDisk)->delete($maybeKey);
+                        }
+                    }
+                } else {
+                    if (Storage::disk($oldDisk)->exists($oldPath)) {
+                        Storage::disk($oldDisk)->delete($oldPath);
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // ignore deletion errors
         }
 
         // Generate safe filename
         $filename = $user->id . '_' . Str::random(20) . '.' . $file->getClientOriginalExtension();
 
         // Store in: avatars/{user_id}/filename.jpg
-        $path = $file->storeAs("avatars/{$user->id}", $filename, $disk);
+        try {
+            $storedPath = $file->storeAs("avatars/{$user->id}", $filename, $disk);
+        } catch (\Throwable $e) {
+            Log::error('Avatar upload failed: ' . $e->getMessage());
+            return;
+        }
 
-        // Save only the path (not full URL)
+        if ($storedPath === false || $storedPath === null) {
+            Log::error('Avatar upload returned false/null for disk: ' . $disk);
+            return;
+        }
+
+        // Attempt to generate a public URL and store that; otherwise build from disk config url and keep storage key
+        $avatarToSave = $storedPath;
+        $generated = null;
+        try {
+            $generated = null;
+            try {
+                $generated = Storage::disk($disk)->url($storedPath);
+            } catch (\Throwable $e) {
+                $generated = null;
+            }
+
+            $diskConfig = config("filesystems.disks.{$disk}", []);
+            $bucket = $diskConfig['bucket'] ?? null;
+            if (!empty($generated) && !empty($bucket) && strpos($generated, trim($bucket, '/')) === false) {
+                $generated = null;
+            }
+
+            if (empty($generated) && !empty($diskConfig['url'])) {
+                $diskUrl = rtrim($diskConfig['url'], '/');
+                $encodedKey = implode('/', array_map('rawurlencode', explode('/', $storedPath)));
+                if (!empty($bucket)) {
+                    $generated = $diskUrl . '/' . trim($bucket, '/') . '/' . ltrim($encodedKey, '/');
+                } else {
+                    $generated = $diskUrl . '/' . ltrim($encodedKey, '/');
+                }
+            }
+
+            if (!empty($generated)) {
+                $avatarToSave = $generated;
+            }
+
         $user->update([
-            'avatar'       => $path,
+            'avatar'       => $avatarToSave,
             'avatar_disk'  => $disk,
         ]);
+        return $generated;
+        } catch (\Throwable $e) {
+            Log::error('Avatar URL generation failed: ' . $e->getMessage());
+            return;
+        }
+        
     }
 
     /**

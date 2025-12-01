@@ -66,6 +66,26 @@ class Transaction extends Model
     }
 
     /**
+     * Proxy attribute: get receipt path (prefer resolved URL from receipt)
+     */
+    public function getReceiptPathAttribute()
+    {
+        try {
+            return $this->receipt ? $this->receipt->url : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Proxy attribute: get receipt disk (not stored per-receipt; return configured disk)
+     */
+    public function getReceiptDiskAttribute()
+    {
+        return env('FILESYSTEM_DISK', config('filesystems.default'));
+    }
+
+    /**
      * Scope a query to only include income transactions.
      */
     public function scopeIncome($query)
@@ -103,5 +123,34 @@ class Transaction extends Model
     public function getFormattedAmountAttribute()
     {
         return ($this->type === 'expense' ? '-' : '+') . '$' . number_format((float) $this->amount, 2);
+    }
+
+    /**
+     * Boot model events to evaluate budgets when transactions change.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::created(function (Transaction $transaction) {
+            try {
+                if ($transaction->user) {
+                    $transaction->user->evaluateBudgetsForTransaction($transaction, 0);
+                }
+            } catch (\Throwable $e) {
+                // swallow to avoid breaking transaction flow; logging could be added
+            }
+        });
+
+        static::updated(function (Transaction $transaction) {
+            try {
+                $original = $transaction->getOriginal('amount') ?? 0;
+                if ($transaction->user) {
+                    $transaction->user->evaluateBudgetsForTransaction($transaction, (float) $original);
+                }
+            } catch (\Throwable $e) {
+                // swallow
+            }
+        });
     }
 }
