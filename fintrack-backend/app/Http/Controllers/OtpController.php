@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Notifications\OtpNotification;
 use App\Services\OtpService;
-use Illuminate\Http\RedirectResponse;
+// RedirectResponse removed so controller can return JSON responses for API clients
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
@@ -37,8 +37,57 @@ class OtpController extends Controller
         ]);
     }
 
-    public function verify(Request $request): RedirectResponse
+    public function verify(Request $request)
     {
+        // If the request expects JSON, handle as API verification
+        if ($request->wantsJson() || $request->isJson()) {
+            $context = $request->input('context', 'registration');
+            $email = $request->input('email');
+            $code = $request->input('code');
+
+            if (!$email || !$code) {
+                return response()->json(['error' => 'email and code are required'], 422);
+            }
+
+            $user = User::where('email', $email)->first();
+            if (!$user) {
+                return response()->json(['error' => 'User not found'], 404);
+            }
+
+            if (!$this->otpService->validate($user, $context, $code)) {
+                return response()->json(['error' => 'The verification code is invalid or has expired.'], 422);
+            }
+
+            if ($context === 'registration') {
+                $user->forceFill([
+                    'email_verified_at' => now(),
+                    'first_login_done' => true,
+                    'password_changed_at' => $user->password_changed_at ?? now(),
+                ])->save();
+
+                // Issue token for mobile API
+                $token = $user->createToken('mobile-app')->plainTextToken;
+
+                return response()->json([
+                    'message' => 'Registration complete',
+                    'user' => $user,
+                    'token' => $token,
+                ]);
+            }
+
+            if ($context === 'password_reset') {
+                // For API flow, mark verified and return success
+                return response()->json(['message' => 'Verification successful. Proceed to reset password.']);
+            }
+
+            if ($context === 'password_change') {
+                return response()->json(['message' => 'Verification successful. You can now update your password.']);
+            }
+
+            return response()->json(['message' => 'Verification successful']);
+        }
+
+        // Fallback: original web/session flow
         $context = Session::get('otp.context');
         $userId = Session::get('otp.user_id');
 
@@ -101,7 +150,7 @@ class OtpController extends Controller
         return redirect()->route('auth.login');
     }
 
-    public function resend(Request $request): RedirectResponse
+    public function resend(Request $request)
     {
         $context = Session::get('otp.context');
         $userId = Session::get('otp.user_id');
@@ -122,7 +171,7 @@ class OtpController extends Controller
         return back()->with('status', 'A new verification code has been sent.');
     }
 
-    public function sendPasswordChangeOtp(Request $request): RedirectResponse
+    public function sendPasswordChangeOtp(Request $request)
     {
         $user = $request->user();
 

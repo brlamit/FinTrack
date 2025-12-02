@@ -101,6 +101,7 @@
                 </div>
             </div> --}}
         </div>
+        
     </div>
 
     @if(!empty($insights ?? []) || !empty($topExpenseCategory ?? []))

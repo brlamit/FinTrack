@@ -301,14 +301,45 @@ class GroupController extends Controller
             if ($request->hasFile('receipt')) {
                 $file = $request->file('receipt');
                 $filename = time() . '_' . $file->getClientOriginalName();
-                $path = $file->storeAs('receipts/' . auth()->id(), $filename, config('filesystems.default'));
+                $disk = env('FILESYSTEM_DISK', config('filesystems.default'));
+                $path = $file->storeAs('receipts/' . auth()->id(), $filename, $disk);
+
+                // Build a public URL for storage entry when possible (include bucket and encode)
+                $pathToSave = $path;
+                $generated = null;
+                try {
+                    $generated = \Storage::disk($disk)->url($path);
+                } catch (\Throwable $e) {
+                    $generated = null;
+                }
+
+                $diskConfig = config("filesystems.disks.{$disk}", []);
+                $diskUrl = $diskConfig['url'] ?? null;
+                $bucket = $diskConfig['bucket'] ?? env('SUPABASE_PUBLIC_BUCKET');
+
+                if (!empty($generated) && !empty($bucket) && strpos($generated, trim($bucket, '/')) === false) {
+                    $generated = null;
+                }
+
+                if (empty($generated) && !empty($diskUrl)) {
+                    $encodedKey = implode('/', array_map('rawurlencode', explode('/', $path)));
+                    if (!empty($bucket)) {
+                        $generated = rtrim($diskUrl, '/') . '/' . trim($bucket, '/') . '/' . ltrim($encodedKey, '/');
+                    } else {
+                        $generated = rtrim($diskUrl, '/') . '/' . ltrim($encodedKey, '/');
+                    }
+                }
+
+                if (!empty($generated)) {
+                    $pathToSave = $generated;
+                }
 
                 $receipt = \App\Models\Receipt::create([
                     'user_id' => auth()->id(),
                     'filename' => $filename,
                     'original_filename' => $file->getClientOriginalName(),
                     'mime_type' => $file->getClientMimeType(),
-                    'path' => $path,
+                    'path' => $pathToSave,
                     'size' => $file->getSize(),
                     'processed' => false,
                 ]);

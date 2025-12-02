@@ -1,78 +1,137 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\OtpController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\ReceiptController;
+use App\Http\Controllers\GroupController;
+use App\Http\Controllers\GroupMemberController;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\BudgetController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\InsightController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\SyncController;
+use App\Http\Controllers\VoiceController;
+use App\Http\Controllers\QrController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+// Current authenticated user
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-// Apply API validation middleware to all API routes
+// Apply your API validation middleware
 Route::middleware(['api.validation'])->group(function () {
 
-// Authentication routes
+// ============================================
+// AUTH ROUTES (Public)
+// ============================================
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
     Route::post('login', [AuthController::class, 'login']);
-    Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
-    Route::post('refresh', [AuthController::class, 'refresh'])->middleware('auth:sanctum');
+
+    // Forgot & Reset password API endpoints
+    Route::post('forgot-password/send-link', [AuthController::class, 'sendResetLink']);
+    Route::post('reset-password', [AuthController::class, 'resetPassword']);
+
+    // Password update with OTP
+    Route::put('password', [UserController::class, 'updatePassword']);
+    Route::post('password/send-otp', [OtpController::class, 'sendPasswordChangeOtp']);
+
+    // OTP verify/resend
+    Route::post('otp/verify', [OtpController::class, 'verify']);
+    Route::post('otp/resend', [OtpController::class, 'resend']);
+
+    // First login – force password change
+    Route::post('force-password-change', [AuthController::class, 'forcePasswordChange']);
+
+    // Logout all devices
+    Route::post('logout-all', [UserController::class, 'logoutAll']);
+
+    // 2FA enable/disable
+    Route::get('2fa/enable', [UserController::class, 'enable2FA']);
+    Route::post('2fa/disable', [UserController::class, 'disable2FA']);
 });
 
-// Protected routes
+// ============================================
+// PROTECTED ROUTES (Requires login)
+// ============================================
 Route::middleware(['auth:sanctum'])->group(function () {
+
+    // User profile
     Route::get('me', [AuthController::class, 'me']);
     Route::put('me', [AuthController::class, 'updateProfile']);
-    Route::put('password', [AuthController::class, 'updatePassword']);
+    Route::get('me/profile', [UserController::class, 'profile']);
+    
+    // Security & preferences
+    Route::get('security', [UserController::class, 'security']);
+    Route::get('preferences', [UserController::class, 'preferences']);
+    Route::put('preferences', [UserController::class, 'updatePreferences']);
 
-    // Transactions
-    Route::get('transactions/statistics', [\App\Http\Controllers\TransactionController::class, 'statistics']);
-    Route::apiResource('transactions', \App\Http\Controllers\TransactionController::class);
+    // Avatar upload/remove
+    Route::post('profile/avatar', [UserController::class, 'updateAvatar']);
+    Route::post('profile/avatar/remove', [UserController::class, 'removeAvatar']);
 
-    // Categories
-    Route::apiResource('categories', \App\Http\Controllers\CategoryController::class);
+    // Transactions CRUD + statistics
+    Route::get('transactions/statistics', [TransactionController::class, 'statistics']);
+    Route::apiResource('transactions', TransactionController::class);
 
-    // Receipts
-    Route::post('receipts/presign', [\App\Http\Controllers\ReceiptController::class, 'presign']);
-    Route::post('receipts/complete', [\App\Http\Controllers\ReceiptController::class, 'complete']);
-    Route::get('receipts/{receipt}/download', [\App\Http\Controllers\ReceiptController::class, 'download']);
-    Route::apiResource('receipts', \App\Http\Controllers\ReceiptController::class);
+    // Categories CRUD
+    Route::apiResource('categories', CategoryController::class);
 
-    // Groups/Family
-    Route::apiResource('groups', \App\Http\Controllers\GroupController::class);
-    Route::post('groups/{group}/invite', [\App\Http\Controllers\GroupMemberController::class, 'invite']);
-    Route::get('groups/{group}/members', [\App\Http\Controllers\GroupController::class, 'members']);
-    Route::post('groups/{group}/split', [\App\Http\Controllers\GroupController::class, 'splitExpense']);
+    // Receipts upload, finalize, download
+    Route::post('receipts/presign', [ReceiptController::class, 'presign']);
+    Route::post('receipts/complete', [ReceiptController::class, 'complete']);
+    Route::get('receipts/{receipt}/download', [ReceiptController::class, 'download']);
+    Route::apiResource('receipts', ReceiptController::class);
 
-    // Budgets
-    Route::apiResource('budgets', \App\Http\Controllers\BudgetController::class);
+    // Groups CRUD + members & split expenses
+    Route::get('groups', [UserController::class, 'groups']);
+    Route::get('groups/{group}', [UserController::class, 'group']);
+    Route::get('groups/{group}/members', [GroupController::class, 'members']);
+    Route::post('groups', [GroupController::class, 'store']);
+    Route::delete('groups/{group}', [GroupController::class, 'destroy']);
+    Route::post('groups/{group}/invite', [GroupMemberController::class, 'invite']);
+    Route::post('groups/{group}/split', [GroupController::class, 'splitExpense']);
+    Route::post('groups/{group}/split-expense-form', [GroupController::class, 'splitExpenseForm']);
+    Route::post('groups/{group}/invite-form', [GroupMemberController::class, 'inviteForm']);
+    Route::delete('groups/{group}/members/{member}', [GroupMemberController::class, 'removeMember']);
 
-    // Reports
-    Route::get('reports/spending', [\App\Http\Controllers\ReportController::class, 'spending']);
-    Route::get('reports/{report}/export', [\App\Http\Controllers\ReportController::class, 'export']);
+    // Budgets CRUD
+    Route::apiResource('budgets', BudgetController::class);
+
+    // Reports & export
+    Route::get('reports/spending', [ReportController::class, 'spending']);
+    Route::get('reports/{report}/export', [ReportController::class, 'export']);
 
     // Insights
-    Route::get('insights', [\App\Http\Controllers\InsightController::class, 'index']);
+    Route::get('insights', [InsightController::class, 'index']);
 
-    // Notifications
-    Route::get('notifications', [\App\Http\Controllers\NotificationController::class, 'index']);
-    Route::get('notifications/unread-count', [\App\Http\Controllers\NotificationController::class, 'unreadCount']);
-    Route::post('notifications/{notification}/mark-read', [\App\Http\Controllers\NotificationController::class, 'markAsRead']);
-    Route::post('notifications/mark-all-read', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead']);
+    // Notifications + unread count + mark read
+    Route::get('notifications', [NotificationController::class, 'index']);
+    Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    Route::post('notifications/{notification}/mark-read', [NotificationController::class, 'markAsRead']);
+    Route::post('notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
 
-    // Sync
-    Route::post('sync/transactions', [\App\Http\Controllers\SyncController::class, 'transactions']);
+    // Sync routes
+    Route::post('sync/transactions', [SyncController::class, 'transactions']);
 
-    // Voice & QR
-    Route::post('voice/parse', [\App\Http\Controllers\VoiceController::class, 'parse']);
-    Route::post('qr/parse', [\App\Http\Controllers\QrController::class, 'parse']);
+    // Voice and QR parsing
+    Route::post('voice/parse', [VoiceController::class, 'parse']);
+    Route::post('qr/parse', [QrController::class, 'parse']);
 });
 
-// Admin routes (requires admin role)
+// ============================================
+// ADMIN ROUTES (Requires login + admin role)
+// ============================================
 Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(function () {
-    Route::get('users', [\App\Http\Controllers\AdminController::class, 'users']);
-    Route::get('transactions', [\App\Http\Controllers\AdminController::class, 'transactions']);
-    Route::post('impersonate', [\App\Http\Controllers\AdminController::class, 'impersonate']);
+    Route::get('users', [AdminController::class, 'users']);
+    Route::get('transactions', [AdminController::class, 'transactions']);
+    Route::post('impersonate/{user}', [AdminController::class, 'impersonate']);
 });
 
 });
