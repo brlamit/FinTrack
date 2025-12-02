@@ -6,6 +6,7 @@ import '../../add_expense/blocs/get_categories_bloc/get_categories_bloc.dart';
 import '../../add_expense/views/add_expense.dart';
 import '../blocs/get_expenses_bloc/get_expenses_bloc.dart';
 import 'main_screen.dart';
+import 'package:fintrack_frontend/services/api_service.dart';
 import '../../stats/stats.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -31,7 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
         if (state is GetExpensesSuccess) {
           return Scaffold(
             backgroundColor: Colors.grey[100],
-            // appBar: AppBar(),
+            
             // bottomNavBar
             bottomNavigationBar: ClipRRect(
               borderRadius: const BorderRadius.vertical(
@@ -77,17 +78,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     builder: (context) => MultiBlocProvider(
                       providers: [
                         BlocProvider(
-                          create: (context) =>
-                              CreateCategoryBloc(FirebaseExpenseRepo()),
+                          create: (context) => CreateCategoryBloc(
+                            RepositoryProvider.of<ExpenseRepository>(context),
+                          ),
                         ),
                         BlocProvider(
-                          create: (context) =>
-                              CreateExpenseBloc(FirebaseExpenseRepo()),
+                          create: (context) => CreateExpenseBloc(
+                            RepositoryProvider.of<ExpenseRepository>(context),
+                          ),
                         ),
                         BlocProvider(
-                          create: (context) =>
-                              GetCategoriesBloc(FirebaseExpenseRepo())
-                                // ..add(GetCategories()),
+                          create: (context) => GetCategoriesBloc(
+                            RepositoryProvider.of<ExpenseRepository>(context),
+                          ),
                         ),
                       ],
                       child: const AddExpense(),
@@ -117,7 +120,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: const Icon(CupertinoIcons.add),
               ),
             ),
-            body: index == 0 ? MainScreen(state.expenses) : const StatScreen(),
+            body: index == 0
+                ? MainScreen(
+                    state.expenses,
+                    userName: ApiService.currentUser?['name']?.toString(),
+                  )
+                : const StatScreen(),
           );
         } else {
           return const Scaffold(
