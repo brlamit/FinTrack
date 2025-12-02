@@ -25,12 +25,18 @@
 
                 @foreach ($metrics as $metric)
                     <div class="col-md-4">
-                        <div class="card border-0 shadow-lg rounded-4 h-100">
+                        <div class="card metric-card border-0 shadow-lg rounded-4 h-100">
                             <div class="card-body position-relative overflow-hidden">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
                                         <h6 class="text-muted mb-1">{{ $metric['label'] }}</h6>
-                                        <h4 class="text-{{ $metric['class'] }} fw-bold">{{ $metric['value'] }}</h4>
+                                        @if($metric['label'] === 'Total Balance')
+                                            <div class="d-flex align-items-center gap-2">
+                                                <h4 id="total-balance-amount" class="text-{{ $metric['class'] }} fw-bold mb-0">{{ $metric['value'] }}</h4>
+                                            </div>
+                                        @else
+                                            <h4 class="text-{{ $metric['class'] }} fw-bold">{{ $metric['value'] }}</h4>
+                                        @endif
                                         <small class="text-muted">{{ $metric['desc'] }}</small>
                                     </div>
                                     <div class="p-3 bg-{{ $metric['class'] }} bg-opacity-10 rounded-circle">
@@ -45,21 +51,21 @@
         </div>
 
         <div class="col-lg-4 d-flex flex-column gap-3">
-            <div class="card shadow-sm">
+                        <div class="card shadow-sm quick-actions-card">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">Quick Actions</h5>
                 </div>
                 <div class="card-body d-flex flex-column gap-2">
-                    <a href="{{ route('user.transactions.create') }}" class="btn btn-primary w-100">
+                    <a href="{{ route('user.transactions.create') }}" class="btn btn-primary w-100 rounded-pill">
                         <i class="fas fa-plus-circle me-1"></i> Add Transaction
                     </a>
-                    <a href="{{ route('user.budgets') }}" class="btn btn-outline-primary w-100">
+                    <a href="{{ route('user.budgets') }}" class="btn btn-outline-primary w-100 rounded-pill">
                         <i class="fas fa-chart-pie me-1"></i> Manage Budgets
                     </a>
-                    <a href="{{ route('user.groups') }}" class="btn btn-outline-primary w-100">
+                    <a href="{{ route('user.groups') }}" class="btn btn-outline-primary w-100 rounded-pill">
                         <i class="fas fa-users me-1"></i> My Groups
                     </a>
-                    <a href="{{ route('user.reports') }}" class="btn btn-outline-primary w-100">
+                    <a href="{{ route('user.reports') }}" class="btn btn-outline-primary w-100 rounded-pill">
                         <i class="fas fa-file-alt me-1"></i> View Reports
                     </a>
                 </div>
@@ -181,43 +187,44 @@
     <div class="row g-4 mb-4">
         <div class="col-12 col-lg-8">
             <div class="card shadow-sm h-100">
-                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Income vs Expense</h5>
-                    <div class="dropdown">
-                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle d-flex align-items-center gap-1" type="button" id="chartPeriodToggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
-                            <i class="far fa-calendar"></i>
-                            <span>{{ $chartWindowDescription ?? 'Select range' }}</span>
-                        </button>
-                        <div class="dropdown-menu dropdown-menu-end p-3 shadow" aria-labelledby="chartPeriodToggle" style="min-width: 250px;">
-                            <form id="chart-period-form" method="GET" action="{{ route('user.dashboard') }}" class="d-flex flex-column gap-3">
-                                <div>
-                                    <label for="chart_period" class="form-label small text-uppercase text-muted mb-1">Chart period</label>
-                                    <select id="chart_period" name="chart_period" class="form-select form-select-sm">
-                                        @foreach(['1' => 'Last month', '3' => 'Last 3 months', '6' => 'Last 6 months', 'custom' => 'Custom range'] as $value => $label)
-                                            <option value="{{ $value }}" {{ (string) ($filters['chart_period'] ?? '3') === (string) $value ? 'selected' : '' }}>{{ $label }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div>
-                                    <label for="chart_end" class="form-label small text-uppercase text-muted mb-1">End month</label>
-                                    <input type="month" id="chart_end" name="chart_end" class="form-control form-control-sm" value="{{ $filters['chart_end'] ?? '' }}">
-                                </div>
-                                <div data-custom-range class="{{ (string) ($filters['chart_period'] ?? '3') === 'custom' ? '' : 'd-none' }}">
-                                    <label for="chart_start" class="form-label small text-uppercase text-muted mb-1">Start month</label>
-                                    <input type="month" id="chart_start" name="chart_start" class="form-control form-control-sm" value="{{ $filters['chart_start'] ?? '' }}">
-                                </div>
-                                @if(isset($filters['category_type']))
-                                    <input type="hidden" name="category_type" value="{{ $filters['category_type'] }}">
-                                @endif
-                                <div class="text-end">
-                                    <a href="{{ route('user.dashboard') }}" class="btn btn-link btn-sm text-decoration-none">Reset</a>
-                                </div>
-                            </form>
+                <div class="card-header bg-white border-0 pb-0">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <div>
+                            <h5 class="mb-1">Income vs Expense</h5>
+                            <span class="text-muted small" data-range-label>{{ $chartWindowDescription ?? 'Loading timeline...' }}</span>
                         </div>
+                       <div class="chart-toolbar d-flex flex-wrap gap-2">
+                        <div class="d-flex flex-wrap gap-2" role="group" aria-label="Select range">
+                            <button type="button" class="control-pill" data-range="3" role="button" tabindex="0" aria-pressed="false">3M</button>
+                            <button type="button" class="control-pill" data-range="6" role="button" tabindex="0" aria-pressed="false">6M</button>
+                            <button type="button" class="control-pill" data-range="12" role="button" tabindex="0" aria-pressed="false">12M</button>
+                            <button type="button" class="control-pill" data-range="all" role="button" tabindex="0" aria-pressed="false">All</button>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2" role="group" aria-label="Chart type">
+                            <button type="button" class="control-pill active" data-chart-type="line" role="button" tabindex="0" aria-pressed="true" aria-label="Line chart"><i class="fas fa-chart-line"></i></button>
+                            <button type="button" class="control-pill" data-chart-type="bar" role="button" tabindex="0" aria-pressed="false" aria-label="Bar chart"><i class="fas fa-chart-column"></i></button>
+                        </div>
+                    </div>
                     </div>
                 </div>
                 <div class="card-body">
-                    <canvas id="incomeExpenseChart" height="260"></canvas>
+                    <div class="chart-wrapper" style="height:320px;">
+                        <canvas id="incomeExpenseChart"></canvas>
+                    </div>
+                    <div class="d-flex flex-wrap gap-4 mt-4">
+                        <div>
+                            <span class="text-muted text-uppercase small fw-semibold">Income (this month)</span>
+                            <p class="mb-0 fw-semibold fs-5 text-success">${{ number_format(data_get($totalsDisplay['monthly'] ?? [], 'income', 0), 2) }}</p>
+                        </div>
+                        <div>
+                            <span class="text-muted text-uppercase small fw-semibold">Expense (this month)</span>
+                            <p class="mb-0 fw-semibold fs-5 text-danger">${{ number_format(data_get($totalsDisplay['monthly'] ?? [], 'expense', 0), 2) }}</p>
+                        </div>
+                        <div>
+                            <span class="text-muted text-uppercase small fw-semibold">Transactions (this month)</span>
+                            <p class="mb-0 fw-semibold fs-5">{{ number_format(data_get($totalsDisplay['monthly'] ?? [], 'transactions', 0)) }}</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -245,6 +252,20 @@
                     <h5 class="mb-0">Recent Transactions</h5>
                     <a href="{{ route('user.transactions') }}" class="btn btn-sm btn-light">View All</a>
                 </div>
+                <div class="p-3 d-flex flex-wrap gap-2 align-items-center">
+                    <div class="input-group input-group-sm me-2" style="max-width:360px;">
+                        <span class="input-group-text" id="search-addon"><i class="fas fa-search"></i></span>
+                        <input id="tx-search" type="search" class="form-control" placeholder="Search transactions (desc, category, type)" aria-label="Search transactions" aria-describedby="search-addon">
+                    </div>
+                    <div class="ms-auto d-flex align-items-center gap-2">
+                        <label for="tx-per-page" class="small text-muted mb-0">Show</label>
+                        <select id="tx-per-page" class="form-select form-select-sm" style="width:80px;">
+                            <option value="5">5</option>
+                            <option value="10" selected>10</option>
+                            <option value="25">25</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead>
@@ -261,7 +282,7 @@
                                 @php
                                     $isIncome = data_get($transaction, 'is_income', false);
                                 @endphp
-                                <tr>
+                                <tr class="transaction-row">
                                     <td>
                                         <span class="badge {{ $isIncome ? 'bg-success' : 'bg-danger' }} text-uppercase">{{ data_get($transaction, 'type', 'n/a') }}</span>
                                     </td>
@@ -293,90 +314,166 @@
 @endsection
 
 @push('scripts')
+@php
+    $userChartData = $chartData ?? [
+        'monthly' => ['labels' => [], 'income' => [], 'expense' => []],
+        'category' => ['labels' => [], 'values' => [], 'colors' => []],
+    ];
+@endphp
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const monthlyData = @json($chartData['monthly'] ?? ['labels' => [], 'income' => [], 'expense' => []]);
-        const categoryData = @json($chartData['category'] ?? ['labels' => [], 'values' => [], 'colors' => []]);
-
-        const chartPeriodForm = document.getElementById('chart-period-form');
-        if (chartPeriodForm) {
-            const periodSelect = chartPeriodForm.querySelector('#chart_period');
-            const customRangeContainer = chartPeriodForm.querySelector('[data-custom-range]');
-            const startInput = chartPeriodForm.querySelector('#chart_start');
-            const endInput = chartPeriodForm.querySelector('#chart_end');
-
-            const updateCustomVisibility = () => {
-                if (periodSelect && customRangeContainer) {
-                    if (periodSelect.value === 'custom') {
-                        customRangeContainer.classList.remove('d-none');
-                    } else {
-                        customRangeContainer.classList.add('d-none');
-                    }
-                }
-            };
-
-            const submitIfReady = () => {
-                if (!periodSelect) {
-                    chartPeriodForm.submit();
-                    return;
-                }
-
-                if (periodSelect.value === 'custom') {
-                    if (startInput?.value && endInput?.value) {
-                        chartPeriodForm.submit();
-                    }
-                } else {
-                    chartPeriodForm.submit();
-                }
-            };
-
-            updateCustomVisibility();
-
-            periodSelect?.addEventListener('change', () => {
-                updateCustomVisibility();
-                if (periodSelect.value !== 'custom') {
-                    submitIfReady();
-                }
-            });
-
-            [startInput, endInput].forEach(input => {
-                input?.addEventListener('change', submitIfReady);
-            });
-
-            chartPeriodForm.querySelectorAll('select').forEach(select => {
-                if (select.id !== 'chart_period') {
-                    select.addEventListener('change', submitIfReady);
-                }
-            });
-        }
+        const chartData = @json($userChartData);
+        const monthlyData = chartData.monthly || { labels: [], income: [], expense: [] };
+        const categoryData = chartData.category || { labels: [], values: [], colors: [] };
 
         const incomeExpenseCanvas = document.getElementById('incomeExpenseChart');
-        if (incomeExpenseCanvas) {
+        const categoryCanvas = document.getElementById('expenseCategoryChart');
+        const rangeButtons = document.querySelectorAll('[data-range]');
+        const chartTypeButtons = document.querySelectorAll('[data-chart-type]');
+        const chartRangeLabel = document.querySelector('[data-range-label]');
+        const parseNumber = (v) => {
+            if (v === null || v === undefined) return 0;
+            if (typeof v === 'number') return v;
+            const s = String(v).replace(/[^0-9.\-]+/g, '');
+            return s === '' ? 0 : Number(s);
+        };
+
+        monthlyData.income = Array.isArray(monthlyData.income) ? monthlyData.income.map(parseNumber) : [];
+        monthlyData.expense = Array.isArray(monthlyData.expense) ? monthlyData.expense.map(parseNumber) : [];
+
+        if (Array.isArray(monthlyData.labels)) {
+            if (monthlyData.income.length !== monthlyData.labels.length) {
+                console.warn('Income dataset length does not match labels', monthlyData);
+            }
+            if (monthlyData.expense.length !== monthlyData.labels.length) {
+                console.warn('Expense dataset length does not match labels', monthlyData);
+            }
+        }
+
+        const totalMonths = Array.isArray(monthlyData.labels) ? monthlyData.labels.length : 0;
+        let currentRange = totalMonths >= 6 ? 6 : totalMonths;
+        let currentChartType = 'line';
+        let incomeExpenseChart;
+
+        const hexToRgba = (hex, alpha) => {
+            const sanitized = (hex || '').replace('#', '');
+            if (!sanitized) return `rgba(0,0,0,${alpha})`;
+            const bigint = parseInt(sanitized, 16);
+            const r = (bigint >> 16) & 255;
+            const g = (bigint >> 8) & 255;
+            const b = bigint & 255;
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        };
+
+        const setActiveRangeButton = (rangeValue, useAll = false) => {
+            rangeButtons.forEach(button => {
+                const key = button.dataset.range;
+                if (key === 'all') {
+                    button.classList.toggle('active', useAll);
+                } else {
+                    const numeric = Number(key);
+                    button.classList.toggle('active', !useAll && numeric === rangeValue);
+                }
+            });
+
+            if (chartRangeLabel) {
+                if (totalMonths === 0) {
+                    chartRangeLabel.textContent = 'No data available yet';
+                } else {
+                    const applied = useAll ? totalMonths : Math.min(rangeValue, totalMonths);
+                    chartRangeLabel.textContent = `Last ${applied} month${applied === 1 ? '' : 's'}`;
+                }
+            }
+        };
+
+        const setActiveChartTypeButton = (type) => {
+            chartTypeButtons.forEach(button => {
+                button.classList.toggle('active', button.dataset.chartType === type);
+            });
+        };
+
+        const disableUnavailableRangeButtons = () => {
+            rangeButtons.forEach(button => {
+                const key = button.dataset.range;
+                if (key === 'all') {
+                    button.disabled = totalMonths === 0;
+                    button.classList.toggle('disabled', totalMonths === 0);
+                } else {
+                    const numeric = Number(key);
+                    const shouldDisable = !totalMonths || numeric > totalMonths;
+                    button.disabled = shouldDisable;
+                    button.classList.toggle('disabled', shouldDisable);
+                }
+            });
+        };
+
+        const sliceMonthlyData = (range) => {
+            if (totalMonths === 0) {
+                return { labels: [], income: [], expense: [] };
+            }
+            const appliedRange = Math.min(Math.max(range, 1), totalMonths);
+            const startIndex = totalMonths - appliedRange;
+            return {
+                labels: monthlyData.labels.slice(startIndex),
+                income: monthlyData.income.slice(startIndex),
+                expense: monthlyData.expense.slice(startIndex),
+            };
+        };
+
+        const createGradient = (ctx, color) => {
+            const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
+            gradient.addColorStop(0, hexToRgba(color, 0.55));
+            gradient.addColorStop(1, hexToRgba(color, 0.05));
+            return gradient;
+        };
+
+        const renderIncomeExpenseChart = (range, type) => {
+            if (!incomeExpenseCanvas || totalMonths === 0 || typeof Chart === 'undefined') {
+                return;
+            }
+
             const ctx = incomeExpenseCanvas.getContext('2d');
-            new Chart(ctx, {
-                type: 'line',
+            const subset = sliceMonthlyData(range);
+            currentRange = subset.labels.length;
+
+            if (incomeExpenseChart) {
+                incomeExpenseChart.destroy();
+            }
+
+            const isLine = type === 'line';
+            const incomeColor = '#16a34a';
+            const expenseColor = '#dc2626';
+
+            incomeExpenseChart = new Chart(ctx, {
+                type: type,
                 data: {
-                    labels: monthlyData.labels,
+                    labels: subset.labels,
                     datasets: [
                         {
                             label: 'Income',
-                            data: monthlyData.income,
-                            borderColor: '#16a34a',
-                            backgroundColor: 'rgba(22, 163, 74, 0.12)',
-                            pointBackgroundColor: '#16a34a',
-                            pointRadius: 4,
-                            tension: 0.35,
-                            fill: true,
+                            data: subset.income,
+                            borderColor: incomeColor,
+                            backgroundColor: isLine ? createGradient(ctx, incomeColor) : hexToRgba(incomeColor, 0.75),
+                            fill: isLine,
+                            tension: isLine ? 0.35 : 0,
+                            borderWidth: isLine ? 3 : 0,
+                            pointRadius: isLine ? 4 : 0,
+                            pointHoverRadius: isLine ? 6 : 0,
+                            maxBarThickness: isLine ? undefined : 42,
+                            borderRadius: isLine ? undefined : 10,
                         },
                         {
                             label: 'Expense',
-                            data: monthlyData.expense,
-                            borderColor: '#dc2626',
-                            backgroundColor: 'rgba(220, 38, 38, 0.12)',
-                            pointBackgroundColor: '#dc2626',
-                            pointRadius: 4,
-                            tension: 0.35,
-                            fill: true,
+                            data: subset.expense,
+                            borderColor: expenseColor,
+                            backgroundColor: isLine ? createGradient(ctx, expenseColor) : hexToRgba(expenseColor, 0.75),
+                            fill: isLine,
+                            tension: isLine ? 0.35 : 0,
+                            borderWidth: isLine ? 3 : 0,
+                            pointRadius: isLine ? 4 : 0,
+                            pointHoverRadius: isLine ? 6 : 0,
+                            maxBarThickness: isLine ? undefined : 42,
+                            borderRadius: isLine ? undefined : 10,
                         },
                     ],
                 },
@@ -384,26 +481,126 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: value => '$' + Number(value).toLocaleString(),
-                            },
-                            grid: { drawBorder: false },
-                        },
-                        x: {
-                            grid: { display: false },
-                        },
-                    },
+                    animation: { duration: 900, easing: 'easeOutQuart' },
                     plugins: {
-                        legend: { display: true, position: 'top' },
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            align: 'start',
+                            labels: { usePointStyle: true, padding: 18 },
+                        },
                         tooltip: {
+                            backgroundColor: '#0f172a',
+                            padding: 12,
                             callbacks: {
                                 label: context => {
                                     const label = context.dataset.label || '';
-                                    const value = Number(context.formattedValue || context.raw || 0);
+                                    const value = Number(context.parsed.y ?? context.parsed ?? 0);
                                     return `${label}: $${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                                },
+                            },
+                        },
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(148, 163, 184, 0.25)',
+                                borderDash: [6, 6],
+                                drawBorder: false,
+                            },
+                            ticks: {
+                                callback: value => `$${Number(value).toLocaleString()}`,
+                            },
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { maxRotation: 0, padding: 8 },
+                        },
+                    },
+                },
+            });
+
+            if (chartRangeLabel && subset.labels.length) {
+                chartRangeLabel.textContent = `Last ${subset.labels.length} month${subset.labels.length === 1 ? '' : 's'}`;
+            }
+        };
+
+        disableUnavailableRangeButtons();
+
+        if (totalMonths > 0) {
+            if (totalMonths >= 6) {
+                currentRange = 6;
+                setActiveRangeButton(6, false);
+            } else {
+                currentRange = totalMonths;
+                setActiveRangeButton(totalMonths, true);
+            }
+            setActiveChartTypeButton(currentChartType);
+            renderIncomeExpenseChart(currentRange, currentChartType);
+        } else if (chartRangeLabel) {
+            chartRangeLabel.textContent = 'No data available yet';
+        }
+
+        rangeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                if (button.disabled) return;
+                const key = button.dataset.range;
+                let sanitizedRange = totalMonths || 1;
+                let useAll = false;
+
+                if (key !== 'all') {
+                    sanitizedRange = Math.min(Math.max(Number(key), 1), totalMonths || 1);
+                } else {
+                    useAll = true;
+                    sanitizedRange = totalMonths || 1;
+                }
+
+                currentRange = sanitizedRange;
+                renderIncomeExpenseChart(currentRange, currentChartType);
+                setActiveRangeButton(sanitizedRange, useAll);
+            });
+        });
+
+        chartTypeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const type = button.dataset.chartType;
+                if (type === currentChartType) return;
+                currentChartType = type;
+                setActiveChartTypeButton(currentChartType);
+                renderIncomeExpenseChart(currentRange || totalMonths || 1, currentChartType);
+            });
+        });
+
+        if (categoryCanvas && Array.isArray(categoryData.labels) && categoryData.labels.length) {
+            const ctx = categoryCanvas.getContext('2d');
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: categoryData.labels,
+                    datasets: [{
+                        data: categoryData.values,
+                        backgroundColor: categoryData.colors,
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '65%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#0f172a',
+                            padding: 12,
+                            callbacks: {
+                                label: context => {
+                                    const value = Number(context.parsed || 0);
+                                    const total = context.dataset.data.reduce((sum, val) => sum + Number(val || 0), 0);
+                                    const percentage = total ? ((value / total) * 100).toFixed(1) : 0;
+                                    return `${context.label}: $${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${percentage}%)`;
                                 },
                             },
                         },
@@ -412,38 +609,83 @@
             });
         }
 
-        const expenseCategoryCanvas = document.getElementById('expenseCategoryChart');
-        if (expenseCategoryCanvas && categoryData.labels && categoryData.labels.length) {
-            const ctx = expenseCategoryCanvas.getContext('2d');
-            new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: categoryData.labels,
-                    datasets: [
-                        {
-                            data: categoryData.values,
-                            backgroundColor: categoryData.colors,
-                            borderWidth: 1,
-                        },
-                    ],
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom' },
-                        tooltip: {
-                            callbacks: {
-                                label: context => {
-                                    const value = Number(context.parsed || 0);
-                                    return `${context.label}: $${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                                },
-                            },
-                        },
-                    },
-                },
-            });
+        // Initialize Bootstrap tooltips (if Bootstrap JS is present)
+        try {
+            if (typeof bootstrap !== 'undefined') {
+                var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                tooltipTriggerList.forEach(function (el) { new bootstrap.Tooltip(el); });
+            }
+        } catch (e) {
+            console.warn('Tooltip init failed', e);
         }
+
+        // Keyboard activation (Enter / Space) for toolbar buttons
+        const addKeyboardActivation = (btn) => {
+            btn.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); btn.click(); }
+            });
+        };
+        rangeButtons.forEach(addKeyboardActivation);
+        chartTypeButtons.forEach(addKeyboardActivation);
+
+        // Server-side Recent Transactions search + pagination
+        const txSearch = document.getElementById('tx-search');
+        const txPerPage = document.getElementById('tx-per-page');
+        const txTbody = document.querySelector('.table-responsive table tbody');
+        const transactionsEndpoint = new URL("{{ route('user.transactions') }}", window.location.origin);
+
+        const escapeHtml = (s) => String(s || '').replace(/[&<>"'`=\/]/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'\/','`':'&#96;','=':'&#61;'})[c]; });
+
+        const renderTransactions = (items) => {
+            if (!txTbody) return;
+            if (!items || items.length === 0) {
+                txTbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">No transactions yet. Start tracking your expenses!</td></tr>`;
+                return;
+            }
+            txTbody.innerHTML = items.map(t => `
+                <tr class="transaction-row">
+                    <td><span class="badge ${t.is_income ? 'bg-success' : 'bg-danger'} text-uppercase">${t.type}</span></td>
+                    <td>${escapeHtml(t.description || '—')}</td>
+                    <td>${t.category_name ? `<span class="badge bg-secondary">${escapeHtml(t.category_name)}</span>` : ''}</td>
+                    <td><strong class="${t.is_income ? 'text-success' : 'text-danger'}">${escapeHtml(t.display_amount)}</strong></td>
+                    <td>${escapeHtml(t.display_date || '—')}</td>
+                </tr>
+            `).join('');
+        };
+
+        // small debounce
+        const debounce = (fn, wait = 250) => {
+            let t;
+            return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+        };
+
+        const fetchAndRender = async () => {
+            const q = txSearch?.value?.trim() || '';
+            const per = Number(txPerPage?.value || 10);
+            const url = new URL(transactionsEndpoint.href);
+            url.searchParams.set('per_page', per);
+            if (q) url.searchParams.set('q', q);
+            try {
+                const resp = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
+                if (!resp.ok) return;
+                const json = await resp.json();
+                renderTransactions(json.data || []);
+            } catch (e) {
+                console.warn('Failed to fetch transactions', e);
+            }
+        };
+
+        if (txSearch) txSearch.addEventListener('input', debounce(fetchAndRender, 300));
+        if (txPerPage) txPerPage.addEventListener('change', fetchAndRender);
+        // initial load
+        fetchAndRender();
     });
 </script>
+@endpush
+
+@push('styles')
+<style>
+    .control-pill:focus { outline: 3px solid rgba(59,130,246,0.25); outline-offset: 2px; }
+    .control-pill.disabled { opacity: .5; pointer-events: none; }
+</style>
 @endpush
