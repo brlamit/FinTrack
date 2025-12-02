@@ -822,6 +822,11 @@ class UserController extends Controller
     {
         $user = auth()->user();
 
+        $formatCurrency = static function (float $amount): string {
+            $sign = $amount < 0 ? '-$' : '$';
+            return $sign . number_format(abs($amount), 2);
+        };
+
         $period = $request->input('period', 'this_month');
         $typeFilter = $request->input('type');
 
@@ -890,6 +895,18 @@ class UserController extends Controller
             $typeFilter = null;
         }
 
+        // Server-side search (q) - search description, category name, and type
+        $search = trim((string) $request->input('q', ''));
+        if ($search !== '') {
+            $transactionsQuery->where(function ($q) use ($search) {
+                $q->where('description', 'like', '%' . $search . '%')
+                    ->orWhere('type', 'like', '%' . $search . '%')
+                    ->orWhereHas('category', function ($cq) use ($search) {
+                        $cq->where('name', 'like', '%' . $search . '%');
+                    });
+            });
+        }
+
         $perPage = (int) max(5, min($request->input('per_page', 15), 100));
 
         $transactions = $transactionsQuery
@@ -897,6 +914,32 @@ class UserController extends Controller
             ->orderByRaw('COALESCE(transaction_date, created_at) DESC')
             ->paginate($perPage)
             ->withQueryString();
+
+        // If request expects JSON (AJAX/dashboard calls), return a compact JSON payload
+        if ($request->wantsJson() || $request->ajax() || str_contains($request->header('accept') ?? '', '/json')) {
+            $items = $transactions->map(function (Transaction $transaction) use ($formatCurrency) {
+                $transactionDate = $transaction->transaction_date ?? $transaction->created_at;
+
+                return [
+                    'type' => $transaction->type,
+                    'description' => $transaction->description,
+                    'category_name' => optional($transaction->category)->name,
+                    'display_amount' => $formatCurrency((float) ($transaction->amount ?? 0)),
+                    'display_date' => $transactionDate?->format('M d, Y'),
+                    'is_income' => $transaction->type === 'income',
+                ];
+            });
+
+            return response()->json([
+                'data' => $items,
+                'meta' => [
+                    'current_page' => $transactions->currentPage(),
+                    'last_page' => $transactions->lastPage(),
+                    'per_page' => $transactions->perPage(),
+                    'total' => $transactions->total(),
+                ],
+            ]);
+        }
 
         $totalsBaseQuery = Transaction::query()
             ->where('user_id', $user->id)
