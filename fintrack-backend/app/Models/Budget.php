@@ -103,11 +103,48 @@ class Budget extends Model
     }
 
     /**
+     * Force refresh computed spending attributes on this model instance.
+     *
+     * This is used by the `User::evaluateBudgetsForTransaction` flow to
+     * ensure `$budget->current_spending` is up-to-date when checking
+     * alert thresholds.
+     *
+     * It sets the computed attributes on the model so subsequent access
+     * returns the freshly-calculated values without requiring a new DB query
+     * for the whole model.
+     *
+     * @return void
+     */
+    public function refreshCurrentSpending(): void
+    {
+        $current = $this->getCurrentSpendingAttribute();
+        $this->setAttribute('current_spending', (float) $current);
+        $this->setAttribute('remaining_amount', (float) ($this->amount - $current));
+        $this->setAttribute('spending_percentage', $this->getSpendingPercentageAttribute());
+    }
+
+    /**
      * Get the spending percentage.
      */
     public function getSpendingPercentageAttribute()
     {
         if ($this->amount == 0) return 0;
         return ($this->current_spending / $this->amount) * 100;
+    }
+
+    /**
+     * Backwards-compatible alias for views that expect `spent`.
+     */
+    public function getSpentAttribute()
+    {
+        return (float) $this->current_spending;
+    }
+
+    /**
+     * Backwards-compatible alias for views that expect `limit_amount`.
+     */
+    public function getLimitAmountAttribute()
+    {
+        return (float) $this->amount;
     }
 }
