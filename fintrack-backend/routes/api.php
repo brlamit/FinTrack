@@ -66,6 +66,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('me', [AuthController::class, 'me']);
     Route::put('me', [AuthController::class, 'updateProfile']);
     Route::get('me/profile', [UserController::class, 'profile']);
+    // Convenience endpoints for budgets under the current user
+    Route::post('me/budgets', [UserController::class, 'storeBudget']);
+    Route::put('me/budgets/{budget}', [UserController::class, 'updateBudget']);
     
     // Security & preferences
     Route::get('security', [UserController::class, 'security']);

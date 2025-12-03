@@ -121,6 +121,9 @@ Route::middleware(['auth'])->group(function () {
 
     // User budgets
     Route::get('/budgets', [UserController::class, 'budgets'])->name('user.budgets');
+    Route::post('/budgets', [UserController::class, 'storeBudget'])->name('user.budgets.store');
+    Route::put('/budgets/{budget}', [UserController::class, 'updateBudget'])->name('user.budgets.update');
+    Route::delete('/budgets/{budget}', [UserController::class, 'destroyBudget'])->name('user.budgets.destroy');
 
     // User groups
     Route::get('/groups', [UserController::class, 'groups'])->name('user.groups');

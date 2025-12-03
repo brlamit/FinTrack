@@ -10,6 +10,7 @@ use App\Models\Notification;
 use App\Models\Category;
 use App\Services\OtpService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Aws\S3\S3Client;
@@ -447,6 +448,188 @@ class UserController extends Controller
     public function edit()
     {
         return view('user.edit');
+    }
+
+    /**
+     * Create a budget scoped to the authenticated user.
+     */
+    public function storeBudget(Request $request)
+    {
+        $input = $request->all();
+
+        // Accept comma-separated thresholds from web form and normalize to array
+        if (isset($input['alert_thresholds']) && is_string($input['alert_thresholds'])) {
+            $parts = array_filter(array_map('trim', preg_split('/[,;]+/', $input['alert_thresholds'])));
+            $input['alert_thresholds'] = array_map(function ($v) {
+                return is_numeric($v) ? (int) $v : $v;
+            }, $parts);
+        }
+
+        $validator = Validator::make($input, [
+            'category_id' => 'nullable|exists:categories,id',
+            'name' => 'required|string|max:255',
+            'amount' => 'required|numeric|min:0.01',
+            'period' => 'required|in:weekly,monthly,quarterly,yearly',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after:start_date',
+            'alert_thresholds' => 'nullable|array',
+            'alert_thresholds.*' => 'numeric|min:0|max:100',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        if (!empty($input['category_id'])) {
+            $category = Category::where('id', $request->category_id)
+                ->where(function ($query) {
+                    $query->where('user_id', auth()->id())
+                          ->orWhereNull('user_id');
+                })
+                ->first();
+
+            if (!$category) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid category',
+                ], 422);
+            }
+        }
+
+        $budget = Budget::create([
+            'user_id' => auth()->id(),
+            'category_id' => $input['category_id'] ?? null,
+            'name' => $input['name'],
+            'amount' => $input['amount'],
+            'period' => $input['period'],
+            'start_date' => $input['start_date'],
+            'end_date' => $input['end_date'],
+            'is_active' => true,
+            'alert_thresholds' => $input['alert_thresholds'] ?? [50, 75, 90],
+        ]);
+
+        // If this is an AJAX/JSON request keep JSON response, otherwise redirect back (web form)
+        if ($request->wantsJson() || $request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Budget created successfully',
+                'data' => $budget->load('category'),
+            ], 201);
+        }
+
+        return redirect()->route('user.budgets')->with('success', 'Budget created successfully');
+    }
+
+    /**
+     * Update a budget owned by the authenticated user.
+     */
+    public function updateBudget(Request $request, Budget $budget)
+    {
+        if ($budget->user_id !== auth()->id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Budget not found',
+            ], 404);
+        }
+
+        $input = $request->all();
+
+        // Normalize CSV thresholds to array when editing from web form
+        if (isset($input['alert_thresholds']) && is_string($input['alert_thresholds'])) {
+            $parts = array_filter(array_map('trim', preg_split('/[,;]+/', $input['alert_thresholds'])));
+            $input['alert_thresholds'] = array_map(function ($v) {
+                return is_numeric($v) ? (int) $v : $v;
+            }, $parts);
+        }
+
+        $validator = Validator::make($input, [
+            'category_id' => 'nullable|exists:categories,id',
+            'name' => 'sometimes|string|max:255',
+            'amount' => 'sometimes|numeric|min:0.01',
+            'period' => 'sometimes|in:weekly,monthly,quarterly,yearly',
+            'start_date' => 'sometimes|date',
+            'end_date' => 'sometimes|date|after:start_date',
+            'is_active' => 'boolean',
+            'alert_thresholds' => 'nullable|array',
+            'alert_thresholds.*' => 'numeric|min:0|max:100',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        if (array_key_exists('category_id', $input)) {
+            $category = Category::where('id', $input['category_id'])
+                ->where(function ($query) {
+                    $query->where('user_id', auth()->id())
+                          ->orWhereNull('user_id');
+                })
+                ->first();
+
+            if (!$category) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid category',
+                ], 422);
+            }
+        }
+
+        $updatable = array_intersect_key($input, array_flip([
+            'category_id', 'name', 'amount', 'period', 'start_date', 'end_date', 'is_active', 'alert_thresholds'
+        ]));
+
+        $budget->update($updatable);
+
+        if ($request->wantsJson() || $request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Budget updated successfully',
+                'data' => $budget->load('category'),
+            ]);
+        }
+
+        return redirect()->route('user.budgets')->with('success', 'Budget updated successfully');
+    }
+
+    /**
+     * Delete a budget owned by the authenticated user.
+     */
+    public function destroyBudget(Request $request, Budget $budget)
+    {
+        if ($budget->user_id !== auth()->id()) {
+            if ($request->wantsJson() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Budget not found',
+                ], 404);
+            }
+
+            return redirect()->route('user.budgets')->with('error', 'Budget not found');
+        }
+
+        try {
+            $budget->delete();
+        } catch (\Throwable $e) {
+            Log::error('Failed to delete budget: ' . $e->getMessage());
+            if ($request->wantsJson() || $request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Failed to delete budget'], 500);
+            }
+            return redirect()->route('user.budgets')->with('error', 'Failed to delete budget');
+        }
+
+        if ($request->wantsJson() || $request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Budget deleted']);
+        }
+
+        return redirect()->route('user.budgets')->with('success', 'Budget deleted successfully');
     }
 
     /**
@@ -1113,7 +1296,12 @@ class UserController extends Controller
             ->with('category')
             ->paginate(10);
 
-        return view('user.budgets.index', compact('budgets'));
+        // Provide categories for the create budget form (system + user's)
+        $categories = Category::where(function ($q) {
+            $q->whereNull('user_id')->orWhere('user_id', auth()->id());
+        })->get();
+
+        return view('user.budgets.index', compact('budgets', 'categories'));
     }
 
     /**
