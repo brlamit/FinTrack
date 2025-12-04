@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:expense_repository/src/entities/entities.dart';
 
 import '../models/models.dart';
@@ -30,7 +30,7 @@ class ExpenseEntity {
       expenseId: doc['expenseId'],
       category:
           Category.fromEntity(CategoryEntity.fromDocument(doc['category'])),
-      date: (doc['date'] as Timestamp).toDate(),
+      date: DateTime.parse(doc['date']),
       amount: doc['amount'],
     );
   }
