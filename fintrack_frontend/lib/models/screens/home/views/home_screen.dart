@@ -3,10 +3,10 @@ import 'dart:math';
 import 'package:expense_repository/expense_repository.dart';
 import '../../add_expense/blocs/create_categorybloc/create_category_bloc.dart';
 import '../../add_expense/blocs/get_categories_bloc/get_categories_bloc.dart';
+import '../../add_expense/blocs/get_categories_bloc/get_categories_event.dart';
 import '../../add_expense/views/add_expense.dart';
 import '../blocs/get_expenses_bloc/get_expenses_bloc.dart';
 import 'main_screen.dart';
-import 'package:fintrack_frontend/services/api_service.dart';
 import '../../stats/stats.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -28,17 +28,17 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<GetExpensesBloc, GetExpensesState>(
-      builder: (context, state) {
-        if (state is GetExpensesSuccess) {
-          return Scaffold(
-            backgroundColor: Colors.grey[100],
-            
-            // bottomNavBar
-            bottomNavigationBar: ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(30),
-              ),
-              child: BottomNavigationBar(
+        builder: (context, state) {
+      if (state is GetExpensesSuccess) {
+        return Scaffold(
+          backgroundColor: Colors.grey[100],
+          // appBar: AppBar(),
+          // bottomNavBar
+          bottomNavigationBar: ClipRRect(
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(30),
+            ),
+            child: BottomNavigationBar(
                 onTap: (value) {
                   setState(() {
                     index = value;
@@ -64,75 +64,68 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     label: "Stats",
                   ),
-                ],
-              ),
-            ),
-            floatingActionButtonLocation:
-                FloatingActionButtonLocation.centerDocked,
-            floatingActionButton: FloatingActionButton(
-              shape: const CircleBorder(),
-              onPressed: () async {
-                var newExpense = await Navigator.push(
-                  context,
-                  MaterialPageRoute<Expense>(
-                    builder: (context) => MultiBlocProvider(
-                      providers: [
-                        BlocProvider(
-                          create: (context) => CreateCategoryBloc(
-                            RepositoryProvider.of<ExpenseRepository>(context),
-                          ),
-                        ),
-                        BlocProvider(
-                          create: (context) => CreateExpenseBloc(
-                            RepositoryProvider.of<ExpenseRepository>(context),
-                          ),
-                        ),
-                        BlocProvider(
-                          create: (context) => GetCategoriesBloc(
-                            RepositoryProvider.of<ExpenseRepository>(context),
-                          ),
-                        ),
-                      ],
-                      child: const AddExpense(),
-                    ),
-                  ),
-                );
-                if (newExpense != null) {
-                  setState(() {
-                    state.expenses.insert(0, newExpense);
-                  });
-                }
-              },
-              child: Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      Theme.of(context).colorScheme.tertiary,
-                      Theme.of(context).colorScheme.secondary,
-                      Theme.of(context).colorScheme.primary,
+                ]),
+          ),
+          floatingActionButtonLocation:
+              FloatingActionButtonLocation.centerDocked,
+          floatingActionButton: FloatingActionButton(
+            shape: const CircleBorder(),
+            onPressed: () async {
+              var newExpense = await Navigator.push(
+                context,
+                MaterialPageRoute<Expense>(
+                  builder: (context) => MultiBlocProvider(
+                    providers: [
+                      BlocProvider(
+                        create: (context) =>
+                            CreateCategoryBloc(SupabaseExpenseRepo()),
+                      ),
+                      BlocProvider(
+                        create: (context) =>
+                            CreateExpenseBloc(SupabaseExpenseRepo()),
+                      ),
+                      BlocProvider(
+                        create: (context) =>
+                            GetCategoriesBloc(SupabaseExpenseRepo())
+                              ..add(GetCategories()),
+                      ),
                     ],
-                    transform: const GradientRotation(pi / 4),
+                    child: const AddExpense(),
                   ),
                 ),
-                child: const Icon(CupertinoIcons.add),
+              );
+              if (newExpense != null) {
+                setState(() {
+                  state.expenses.insert(0, newExpense);
+                });
+              }
+            },
+            child: Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).colorScheme.tertiary,
+                    Theme.of(context).colorScheme.secondary,
+                    Theme.of(context).colorScheme.primary,
+                  ],
+                  transform: const GradientRotation(pi / 4),
+                ),
               ),
+              child: const Icon(CupertinoIcons.add),
             ),
-            body: index == 0
-                ? MainScreen(
-                    state.expenses,
-                    userName: ApiService.currentUser?['name']?.toString(),
-                  )
-                : const StatScreen(),
-          );
-        } else {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-      },
-    );
+          ),
+          body: index == 0 ? MainScreen(state.expenses) : const StatScreen(),
+        );
+      } else {
+        return const Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+      }
+    });
   }
 }
