@@ -1,4 +1,3 @@
-import 'package:fintrack_frontend/models/screens/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:fintrack_frontend/services/api_service.dart';
 import 'package:fintrack_frontend/models/screens/verify_otp_screen.dart';
