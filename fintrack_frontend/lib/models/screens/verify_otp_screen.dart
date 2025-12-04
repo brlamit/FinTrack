@@ -27,8 +27,9 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
 
   Future<void> _verify() async {
     final code = _controllers.map((c) => c.text.trim()).join();
-    if (code.isEmpty || code.length != 4)
+    if (code.isEmpty || code.length != 4) {
       return setState(() => _error = 'Enter 4-digit verification code');
+    }
 
     setState(() {
       _loading = true;
@@ -111,8 +112,9 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                           // move focus to last
                           _focusNodes[3].requestFocus();
                         } else {
-                          if (i + 1 < _focusNodes.length)
+                          if (i + 1 < _focusNodes.length) {
                             _focusNodes[i + 1].requestFocus();
+                          }
                         }
                       } else if (v.isEmpty) {
                         if (i - 1 >= 0) _focusNodes[i - 1].requestFocus();

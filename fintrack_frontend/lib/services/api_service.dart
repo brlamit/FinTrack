@@ -97,9 +97,9 @@ class ApiService {
           final parsed = jsonDecode(resp.body);
           if (parsed is Map && parsed['error'] != null) {
             final e = parsed['error'];
-            if (e is String)
+            if (e is String) {
               errMsg = '$errMsg - $e';
-            else if (e is Map && e['message'] != null)
+            } else if (e is Map && e['message'] != null)
               errMsg = '$errMsg - ${e['message']}';
             else
               errMsg = '$errMsg - ${resp.body}';
@@ -384,9 +384,9 @@ class ApiService {
       if (txResp.statusCode == 200 && txResp.body.isNotEmpty) {
         try {
           final decoded = jsonDecode(txResp.body);
-          if (decoded is List)
+          if (decoded is List) {
             transactions = decoded;
-          else if (decoded is Map && decoded['data'] != null)
+          } else if (decoded is Map && decoded['data'] != null)
             transactions = List<dynamic>.from(decoded['data']);
         } catch (_) {}
       }
@@ -400,9 +400,9 @@ class ApiService {
       if (budResp.statusCode == 200 && budResp.body.isNotEmpty) {
         try {
           final decoded = jsonDecode(budResp.body);
-          if (decoded is List)
+          if (decoded is List) {
             budgets = decoded;
-          else if (decoded is Map && decoded['data'] != null)
+          } else if (decoded is Map && decoded['data'] != null)
             budgets = List<dynamic>.from(decoded['data']);
         } catch (_) {}
       }

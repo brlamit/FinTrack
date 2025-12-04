@@ -8,7 +8,6 @@ import 'models/screens/forgot_password_screen.dart';
 import 'models/screens/home/views/home_screen.dart';
 import 'package:fintrack_frontend/services/in_memory_expense_repo.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:expense_repository/expense_repository.dart';
 import 'models/screens/home/blocs/get_expenses_bloc/get_expenses_bloc.dart';
 
 void main() async {
@@ -45,7 +44,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
 
-      initialRoute: '/login',
+      initialRoute: '/home',
 
       routes: {
         '/login': (_) => LoginScreen(),
