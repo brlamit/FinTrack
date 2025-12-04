@@ -139,6 +139,12 @@ Route::middleware(['auth'])->group(function () {
 
     // Notifications (web view)
     Route::get('/notifications', [UserController::class, 'notifications'])->name('user.notifications');
+    // Accept POST for the actual action; also provide a safe GET redirect so
+    // users who accidentally open the URL in a new tab don't get a 405 page.
+    Route::get('/notifications/mark-all-read', function () {
+        return redirect()->route('user.notifications');
+    })->name('user.notifications.mark-all-read.get');
+
     Route::post('/notifications/mark-all-read', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('user.notifications.mark-all-read');
     Route::post('/notifications/{notification}/mark-read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('user.notifications.mark-read');
 
