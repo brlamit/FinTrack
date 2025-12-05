@@ -28,7 +28,14 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (success) {
-        Navigator.pushReplacementNamed(context, '/home'); //  Go to Home
+        final userName = ApiService.currentUser?['name'] ?? 'User';
+
+        Navigator.pushReplacementNamed(
+          context,
+          '/home',
+          arguments: userName,
+        );
+
       }
     } catch (e) {
       setState(() => _error = e.toString());

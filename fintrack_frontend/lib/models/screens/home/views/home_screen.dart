@@ -15,7 +15,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../add_expense/blocs/create_expense_bloc/create_expense_bloc.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final String? userName;
+
+  const HomeScreen({super.key, this.userName});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -117,7 +119,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: const Icon(CupertinoIcons.add),
             ),
           ),
-          body: index == 0 ? MainScreen(state.expenses) : const StatScreen(),
+          body: index == 0 ? MainScreen(state.expenses, userName: widget.userName ?? 'User') : const StatScreen(),
         );
       } else {
         return const Scaffold(

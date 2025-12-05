@@ -7,7 +7,8 @@ import 'package:intl/intl.dart';
 
 class MainScreen extends StatelessWidget {
   final List<Expense> expenses;
-  const MainScreen(this.expenses, {super.key});
+  final String? userName;
+  const MainScreen(this.expenses, {super.key, required this.userName});
 
   // to show total expenses balance
   double _calculateTotalExpenses(List<Expense> expenses) {
@@ -43,14 +44,10 @@ class MainScreen extends StatelessWidget {
                             color: Colors.yellow[700],
                           ),
                         ),
-                        const Icon(
-                          CupertinoIcons.person_alt,
-                        ),
+                        const Icon(CupertinoIcons.person_alt),
                       ],
                     ),
-                    const SizedBox(
-                      width: 8,
-                    ),
+                    const SizedBox(width: 8),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -63,7 +60,8 @@ class MainScreen extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          "Jonh Doe",
+                          "Hello, ${userName ?? 'User'}!",
+
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -71,7 +69,7 @@ class MainScreen extends StatelessWidget {
                           ),
                         ),
                       ],
-                    )
+                    ),
                   ],
                 ),
                 IconButton(
@@ -80,30 +78,29 @@ class MainScreen extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(
-              height: 20.0,
-            ),
+            const SizedBox(height: 20.0),
             // card
             Container(
               width: MediaQuery.of(context).size.width,
               height: MediaQuery.of(context).size.width / 2,
               decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Theme.of(context).colorScheme.primary,
-                      Theme.of(context).colorScheme.secondary,
-                      Theme.of(context).colorScheme.tertiary,
-                    ],
-                    transform: const GradientRotation(pi / 4),
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).colorScheme.primary,
+                    Theme.of(context).colorScheme.secondary,
+                    Theme.of(context).colorScheme.tertiary,
+                  ],
+                  transform: const GradientRotation(pi / 4),
+                ),
+                borderRadius: BorderRadius.circular(25),
+                boxShadow: [
+                  BoxShadow(
+                    blurRadius: 4,
+                    color: Colors.grey.shade300,
+                    offset: const Offset(5, 5),
                   ),
-                  borderRadius: BorderRadius.circular(25),
-                  boxShadow: [
-                    BoxShadow(
-                      blurRadius: 4,
-                      color: Colors.grey.shade300,
-                      offset: const Offset(5, 5),
-                    )
-                  ]),
+                ],
+              ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -115,9 +112,7 @@ class MainScreen extends StatelessWidget {
                       color: Colors.white,
                     ),
                   ),
-                  const SizedBox(
-                    height: 12,
-                  ),
+                  const SizedBox(height: 12),
                   Text(
                     '\$${totalExpenses.toStringAsFixed(2)}',
                     style: const TextStyle(
@@ -126,9 +121,7 @@ class MainScreen extends StatelessWidget {
                       color: Colors.white,
                     ),
                   ),
-                  const SizedBox(
-                    height: 12,
-                  ),
+                  const SizedBox(height: 12),
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       vertical: 12,
@@ -155,9 +148,7 @@ class MainScreen extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            const SizedBox(
-                              width: 8,
-                            ),
+                            const SizedBox(width: 8),
                             const Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -178,7 +169,7 @@ class MainScreen extends StatelessWidget {
                                   ),
                                 ),
                               ],
-                            )
+                            ),
                           ],
                         ),
                         //expense row
@@ -199,9 +190,7 @@ class MainScreen extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            const SizedBox(
-                              width: 8,
-                            ),
+                            const SizedBox(width: 8),
                             const Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -224,17 +213,15 @@ class MainScreen extends StatelessWidget {
                               ],
                             ),
                           ],
-                        )
+                        ),
                       ],
                     ),
-                  )
+                  ),
                 ],
               ),
             ),
             // Transiction row
-            const SizedBox(
-              height: 40,
-            ),
+            const SizedBox(height: 40),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -259,9 +246,7 @@ class MainScreen extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(
-              height: 20,
-            ),
+            const SizedBox(height: 20),
             Expanded(
               child: ListView.builder(
                 itemCount: expenses.length,
@@ -287,8 +272,9 @@ class MainScreen extends StatelessWidget {
                                       width: 50,
                                       height: 50,
                                       decoration: BoxDecoration(
-                                        color:
-                                            Color(expenses[i].category.color),
+                                        color: Color(
+                                          expenses[i].category.color,
+                                        ),
                                         shape: BoxShape.circle,
                                       ),
                                     ),
@@ -304,15 +290,14 @@ class MainScreen extends StatelessWidget {
                                     // ),
                                   ],
                                 ),
-                                const SizedBox(
-                                  width: 12,
-                                ),
+                                const SizedBox(width: 12),
                                 Text(
                                   expenses[i].category.name,
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color:
-                                        Theme.of(context).colorScheme.onSurface,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -325,18 +310,21 @@ class MainScreen extends StatelessWidget {
                                   "\$${expenses[i].amount}.00",
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color:
-                                        Theme.of(context).colorScheme.onSurface,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
                                 Text(
-                                  DateFormat('dd/MM/yyyy')
-                                      .format(expenses[i].date),
+                                  DateFormat(
+                                    'dd/MM/yyyy',
+                                  ).format(expenses[i].date),
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color:
-                                        Theme.of(context).colorScheme.outline,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.outline,
                                     fontWeight: FontWeight.w400,
                                   ),
                                 ),

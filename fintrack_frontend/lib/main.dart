@@ -44,17 +44,22 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
 
-      initialRoute: '/home',
+      initialRoute: '/login',
 
       routes: {
         '/login': (_) => LoginScreen(),
         '/register': (_) => SignupScreen(),
         '/forgot-password': (_) => ForgotPasswordScreen(),
-        '/home': (context) => BlocProvider(
-          create: (_) =>
-              GetExpensesBloc(InMemoryExpenseRepo())..add(GetExpenses()),
-          child: HomeScreen(),
-        ),
+        '/home': (context) {
+          final userName = ModalRoute.of(context)!.settings.arguments as String?;
+
+          return BlocProvider(
+            create: (_) =>
+                GetExpensesBloc(InMemoryExpenseRepo())..add(GetExpenses()),
+            child: HomeScreen(userName: userName),
+          );
+        },
+
       },
       onUnknownRoute: (settings) {
         // Fallback for unregistered routes — send user to login
