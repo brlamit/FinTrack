@@ -156,7 +156,7 @@ class ReportController extends Controller
     /**
      * Generate a simple balance sheet and return PDF download (or JSON).
      */
-    public function balanceSheet(Request $request)
+    public function reportsheet(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'start_date' => 'nullable|date',
@@ -328,8 +328,8 @@ class ReportController extends Controller
 
         // Render PDF using a Blade view
         try {
-            $pdf = Pdf::loadView('user.reports.balance_sheet_pdf', $data);
-            $filename = sprintf('balance_sheet_%s_to_%s.pdf', $startDate->toDateString(), $endDate->toDateString());
+            $pdf = Pdf::loadView('user.reports.report_sheet_pdf', $data);
+            $filename = sprintf('report_sheet_%s_to_%s.pdf', $startDate->toDateString(), $endDate->toDateString());
             return $pdf->download($filename);
         } catch (\Throwable $e) {
             // If the client expects JSON, return JSON error (API clients)
@@ -345,7 +345,7 @@ class ReportController extends Controller
             // can view/save the report manually. Also pass the error message so
             // the UI can show a friendly banner.
             $dataWithError = array_merge($data, ['pdf_error' => $e->getMessage()]);
-            return response()->view('user.reports.balance_sheet_pdf', $dataWithError, 200);
+            return response()->view('user.reports.report_sheet_pdf', $dataWithError, 200);
         }
     }
 }

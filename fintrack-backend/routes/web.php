@@ -139,7 +139,7 @@ Route::middleware(['auth'])->group(function () {
     // Web JSON endpoint for spending report (uses session auth so page JS can fetch)
     Route::get('/reports/spending/data', [\App\Http\Controllers\ReportController::class, 'spending'])->name('user.reports.spending.data');
     // Balance sheet PDF download (uses session auth so it works from the web UI)
-    Route::get('/reports/balance-sheet/download', [\App\Http\Controllers\ReportController::class, 'balanceSheet'])->name('user.reports.balance-sheet.download');
+    Route::get('/reports/report-sheet/download', [\App\Http\Controllers\ReportController::class, 'reportsheet'])->name('user.reports.reportsheet.download');
 
     // Notifications (web view)
     Route::get('/notifications', [UserController::class, 'notifications'])->name('user.notifications');

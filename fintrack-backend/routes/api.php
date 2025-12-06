@@ -108,7 +108,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::apiResource('budgets', BudgetController::class);
 
     // Reports & export
-    Route::get('reports/balance-sheet', [ReportController::class, 'balanceSheet']);
+    Route::get('reports/report_sheet', [ReportController::class, 'reportsheet']);
     Route::get('reports/spending', [ReportController::class, 'spending']);
     Route::get('reports/{report}/export', [ReportController::class, 'export']);
 
