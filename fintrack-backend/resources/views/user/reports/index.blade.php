@@ -28,7 +28,7 @@
                         <div class="col-auto ms-auto">
                             <div class="btn-group mt-2">
                                 <button class="btn btn-outline-light btn-sm bg-black text-white" data-bs-toggle="modal" data-bs-target="#monthlyReport"><i class="fas fa-calendar"></i> Configure</button>
-                                <button class="btn btn-outline-light btn-sm bg-black text-white" data-bs-toggle="modal" data-bs-target="#balanceSheetModal"><i class="fas fa-file-pdf"></i> Balance Sheet</button>
+                                <button class="btn btn-outline-light btn-sm bg-black text-white" data-bs-toggle="modal" data-bs-target="#reportSheetModal"><i class="fas fa-file-pdf"></i> Balance Sheet</button>
                             </div>
                         </div>
                     </div>
@@ -213,15 +213,15 @@
     </div>
 </div>
 
-<!-- Balance Sheet Modal -->
-<div class="modal fade" id="balanceSheetModal" tabindex="-1" aria-labelledby="balanceSheetModalLabel" aria-hidden="true">
+<!-- Report Sheet Modal -->
+<div class="modal fade" id="reportSheetModal" tabindex="-1" aria-labelledby="reportSheetModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="balanceSheetModalLabel">Generate Balance Sheet (PDF)</h5>
+                <h5 class="modal-title" id="reportSheetModalLabel">Generate Report Sheet (PDF)</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="GET" action="/reports/balance-sheet/download" target="_blank">
+            <form method="GET" action="{{ route('user.reports.reportsheet.download') }}" target="_blank">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="bs-start" class="form-label">Start date</label>

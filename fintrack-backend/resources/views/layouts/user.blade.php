@@ -407,6 +407,7 @@
     </script>
 
 <!-- Tawk.to Live Chat - 100% Working -->
+    @yield('modals')
     @stack('scripts')
     <!-- Notification toast -->
     <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080;">
