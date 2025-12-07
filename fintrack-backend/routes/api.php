@@ -19,80 +19,96 @@ use App\Http\Controllers\QrController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+
+// ============================================================================
 // Current authenticated user
+// ============================================================================
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-// Apply your API validation middleware
+
+// ============================================================================
+// APPLY YOUR API VALIDATION MIDDLEWARE
+// ============================================================================
 Route::middleware(['api.validation'])->group(function () {
 
-// ============================================
+
+// ============================================================================
 // AUTH ROUTES (Public)
-// ============================================
+// ============================================================================
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
     Route::post('login', [AuthController::class, 'login']);
 
-    // Forgot & Reset password API endpoints
+    // Forgot + Reset password
     Route::post('forgot-password/send-link', [AuthController::class, 'sendResetLink']);
     Route::post('reset-password', [AuthController::class, 'resetPassword']);
 
-    // Password update with OTP
+    // Password update w/ OTP
     Route::put('password', [UserController::class, 'updatePassword']);
     Route::post('password/send-otp', [OtpController::class, 'sendPasswordChangeOtp']);
 
-    // OTP verify/resend
+    // OTP Verify/Resend
     Route::post('otp/verify', [OtpController::class, 'verify']);
     Route::post('otp/resend', [OtpController::class, 'resend']);
 
-    // First login – force password change
+    // First login force password change
     Route::post('force-password-change', [AuthController::class, 'forcePasswordChange']);
 
     // Logout all devices
     Route::post('logout-all', [UserController::class, 'logoutAll']);
 
-    // 2FA enable/disable
+    // 2FA
     Route::get('2fa/enable', [UserController::class, 'enable2FA']);
     Route::post('2fa/disable', [UserController::class, 'disable2FA']);
 });
 
-// ============================================
+
+// ============================================================================
 // PROTECTED ROUTES (Requires login)
-// ============================================
+// ============================================================================
 Route::middleware(['auth:sanctum'])->group(function () {
 
-    // User profile
+    // -------------------------------------------------------
+    // 🧑 USER PROFILE
+    // -------------------------------------------------------
     Route::get('me', [AuthController::class, 'me']);
     Route::put('me', [AuthController::class, 'updateProfile']);
     Route::get('me/profile', [UserController::class, 'profile']);
-    // Convenience endpoints for budgets under the current user
-    Route::post('me/budgets', [UserController::class, 'storeBudget']);
-    Route::put('me/budgets/{budget}', [UserController::class, 'updateBudget']);
-    
-    // Security & preferences
+
+    // 🔥 Added from web.php (settings & security)
     Route::get('security', [UserController::class, 'security']);
     Route::get('preferences', [UserController::class, 'preferences']);
     Route::put('preferences', [UserController::class, 'updatePreferences']);
 
-    // Avatar upload/remove
+    // Avatar
     Route::post('profile/avatar', [UserController::class, 'updateAvatar']);
     Route::post('profile/avatar/remove', [UserController::class, 'removeAvatar']);
 
-    // Transactions CRUD + statistics
+
+    // -------------------------------------------------------
+    // 💰 TRANSACTIONS
+    // -------------------------------------------------------
     Route::get('transactions/statistics', [TransactionController::class, 'statistics']);
     Route::apiResource('transactions', TransactionController::class);
 
-    // Categories CRUD
+    // -------------------------------------------------------
+    // 🗂️ CATEGORIES
+    // -------------------------------------------------------
     Route::apiResource('categories', CategoryController::class);
 
-    // Receipts upload, finalize, download
+    // -------------------------------------------------------
+    // 🧾 RECEIPTS
+    // -------------------------------------------------------
     Route::post('receipts/presign', [ReceiptController::class, 'presign']);
     Route::post('receipts/complete', [ReceiptController::class, 'complete']);
     Route::get('receipts/{receipt}/download', [ReceiptController::class, 'download']);
     Route::apiResource('receipts', ReceiptController::class);
 
-    // Groups CRUD + members & split expenses
+    // -------------------------------------------------------
+    // 👥 GROUPS & MEMBERS
+    // -------------------------------------------------------
     Route::get('groups', [UserController::class, 'groups']);
     Route::get('groups/{group}', [UserController::class, 'group']);
     Route::get('groups/{group}/members', [GroupController::class, 'members']);
@@ -104,38 +120,83 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('groups/{group}/invite-form', [GroupMemberController::class, 'inviteForm']);
     Route::delete('groups/{group}/members/{member}', [GroupMemberController::class, 'removeMember']);
 
-    // Budgets CRUD
+    // 🔥 Added from web.php (group transactions view)
+    Route::get('groups/{group}/transactions', [UserController::class, 'groupTransactions']);
+
+
+    // -------------------------------------------------------
+    // 📊 BUDGETS
+    // -------------------------------------------------------
     Route::apiResource('budgets', BudgetController::class);
 
-    // Reports & export
+    // Convenience routes
+    Route::post('me/budgets', [UserController::class, 'storeBudget']);
+    Route::put('me/budgets/{budget}', [UserController::class, 'updateBudget']);
+
+
+    // -------------------------------------------------------
+    // 📈 REPORTS
+    // -------------------------------------------------------
     Route::get('reports/report_sheet', [ReportController::class, 'reportsheet']);
     Route::get('reports/spending', [ReportController::class, 'spending']);
     Route::get('reports/{report}/export', [ReportController::class, 'export']);
 
-    // Insights
+    // 🔥 Added (for frontend JS)
+    Route::get('reports/spending/data', [ReportController::class, 'spending']);
+
+
+    // -------------------------------------------------------
+    // 💡 INSIGHTS
+    // -------------------------------------------------------
     Route::get('insights', [InsightController::class, 'index']);
 
-    // Notifications + unread count + mark read
+
+    // -------------------------------------------------------
+    // 🔔 NOTIFICATIONS
+    // -------------------------------------------------------
     Route::get('notifications', [NotificationController::class, 'index']);
     Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
     Route::post('notifications/{notification}/mark-read', [NotificationController::class, 'markAsRead']);
     Route::post('notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
 
-    // Sync routes
+
+    // -------------------------------------------------------
+    // 🔄 SYNC
+    // -------------------------------------------------------
     Route::post('sync/transactions', [SyncController::class, 'transactions']);
 
-    // Voice and QR parsing
+    // -------------------------------------------------------
+    // 🎤 VOICE + QR
+    // -------------------------------------------------------
     Route::post('voice/parse', [VoiceController::class, 'parse']);
     Route::post('qr/parse', [QrController::class, 'parse']);
 });
 
+
 // ============================================
-// ADMIN ROUTES (Requires login + admin role)
+// ADMIN API ROUTES
 // ============================================
-Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(function () {
-    Route::get('users', [AdminController::class, 'users']);
-    Route::get('transactions', [AdminController::class, 'transactions']);
-    Route::post('impersonate/{user}', [AdminController::class, 'impersonate']);
+Route::prefix('admin')->group(function () {
+
+    // -------------------------------
+    // ADMIN LOGIN (Public)
+    // -------------------------------
+    Route::post('login', [\App\Http\Controllers\Admin\AdminAuthController::class, 'login']);
+
+    // -------------------------------
+    // ADMIN PROTECTED ROUTES
+    // -------------------------------
+    Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+
+        Route::get('users', [AdminController::class, 'users']);
+        Route::get('transactions', [AdminController::class, 'transactions']);
+        Route::post('impersonate/{user}', [AdminController::class, 'impersonate']);
+
+        // NEW (from your message)
+        Route::post('groups/send-engagement-reminders', [\App\Http\Controllers\Admin\AdminGroupController::class, 'sendEngagementReminders']);
+        Route::post('engagement/send-personal-reminders', [\App\Http\Controllers\Admin\AdminGroupController::class, 'sendPersonalEngagementReminders']);
+    });
 });
+
 
 });
