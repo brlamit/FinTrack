@@ -23,7 +23,7 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/docs', function () {
+Route::get('/api', function () {
     return view('scramble');
 });
 
