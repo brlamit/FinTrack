@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 // Firebase removed for now to avoid initialization errors during testing.
-import 'models/screens/login_screen.dart';
+import 'screens/login/login_screen.dart';
 import 'package:fintrack_frontend/services/api_service.dart';
-import 'models/screens/signup_screen.dart';
-import 'models/screens/forgot_password_screen.dart';
-import 'models/screens/home/views/home_screen.dart';
+import 'screens/login/signup_screen.dart';
+import 'screens/login/forgot_password_screen.dart';
+import 'screens/home/views/home_screen.dart';
 import 'package:fintrack_frontend/services/in_memory_expense_repo.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'models/screens/home/blocs/get_expenses_bloc/get_expenses_bloc.dart';
+import 'screens/home/blocs/get_expenses_bloc/get_expenses_bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
