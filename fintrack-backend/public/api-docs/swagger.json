@@ -375,7 +375,9 @@
         "consumes": ["multipart/form-data"],
         "security": [{ "BearerAuth": [] }],
         "parameters": [
-          { "name": "name", "in": "formData", "type": "string", "required": true }
+          { "name": "name", "in": "formData", "type": "string", "required": true },
+          { "name": "description", "in": "formData", "type": "string" },
+          { "name": "type", "in": "formData", "type": "string", "enum": ["family", "friends", "work"], "required": true }
         ],
         "responses": { "201": { "description": "Group created" } }
       }
@@ -421,7 +423,9 @@
         "consumes": ["multipart/form-data"],
         "security": [{ "BearerAuth": [] }],
         "parameters": [
+          { "name": "name", "in": "formData", "type": "string", "required": true },
           { "name": "email", "in": "formData", "type": "string", "required": true }
+
         ],
         "responses": { "200": { "description": "Invited" } }
       }
@@ -478,7 +482,11 @@
         "consumes": ["multipart/form-data"],
         "security": [{ "BearerAuth": [] }],
         "parameters": [
-          { "name": "limit", "in": "formData", "type": "number", "required": true }
+          { "name": "name", "in":"formData", "type": "string", "required":true},
+          { "name": "amount", "in": "formData", "type": "number", "required": true },
+          { "name": "start_date", "in": "formData", "type": "string", "format": "date", "required": true },
+          { "name": "end_date", "in": "formData", "type": "string", "format": "date", "required": true },
+          { "name": "period", "in": "formData", "type": "string", "enum": ["weekly","monthly", "yearly"], "required": true }
         ],
         "responses": { "201": { "description": "Created" } }
       }
@@ -495,7 +503,9 @@
 
     "/reports/{report}/export": {
       "parameters": [
-        { "name": "report", "in": "path", "type": "string", "required": true }
+        {"name": "report", "in": "path", "type": "string", "required": true },
+        { "name": "format", "in": "query", "type": "string", "enum": ["pdf", "csv"], "required": true },
+        { "name": "type", "in": "query", "type": "string", "enum": ["all", "income", "expense"], "required": false }
       ],
       "get": {
         "tags": ["Reports"],
