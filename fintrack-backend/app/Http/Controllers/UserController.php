@@ -1424,7 +1424,15 @@ class UserController extends Controller
      */
     public function reports()
     {
-        return view('user.reports.index');
+        // Load categories (system + user) for report filters
+        $categories = \App\Models\Category::whereNull('user_id')
+            ->orWhere('user_id', auth()->id())
+            ->orderBy('name')
+            ->get();
+
+        return view('user.reports.index', [
+            'categories' => $categories,
+        ]);
     }
 
     /**

@@ -11,8 +11,11 @@
     <script src="https://unpkg.com/swagger-ui-dist@5.10.3/swagger-ui-bundle.js"></script>
     <script>
         window.onload = function() {
+            const params = new URLSearchParams(location.search);
+            const sourceUrl = params.get('url') || '{{ url('/api-docs/swagger.json') }}';
+
             const ui = SwaggerUIBundle({
-                url: '/docs/api',
+                url: sourceUrl,
                 dom_id: '#swagger-ui',
                 deepLinking: true,
                 presets: [
@@ -22,7 +25,16 @@
                 plugins: [
                     SwaggerUIBundle.plugins.DownloadUrl
                 ],
-                layout: "BaseLayout"
+                layout: 'BaseLayout',
+                tryItOutEnabled: true,
+                requestInterceptor: (req) => {
+                    // Attach Bearer token stored in localStorage if present
+                    const token = localStorage.getItem('fintrack_bearer');
+                    if (token && !req.headers['Authorization']) {
+                        req.headers['Authorization'] = 'Bearer ' + token;
+                    }
+                    return req;
+                }
             });
         };
     </script>

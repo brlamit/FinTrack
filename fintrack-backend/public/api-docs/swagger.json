@@ -31,6 +31,7 @@
     { "name": "VoiceQR", "description": "Voice & QR parsing" },
     { "name": "Admin", "description": "Admin only endpoints" }
   ],
+
   "paths": {
 
     "/auth/register": {
@@ -41,8 +42,8 @@
         "parameters": [
           { "name": "name", "in": "formData", "required": true, "type": "string" },
           { "name": "email", "in": "formData", "required": true, "type": "string", "format": "email" },
-          { "name": "password", "in": "formData", "required": true, "type": "string", "format": "password" },
-          { "name": "password_confirmation", "in": "formData", "required": true, "type": "string", "format": "password" }
+          { "name": "password", "in": "formData", "required": true, "type": "string" },
+          { "name": "password_confirmation", "in": "formData", "required": true, "type": "string" }
         ],
         "responses": {
           "201": { "description": "User registered" },
@@ -57,8 +58,8 @@
         "summary": "Login user & return token",
         "consumes": ["multipart/form-data"],
         "parameters": [
-          { "name": "email", "in": "formData", "required": true, "type": "string", "format": "email" },
-          { "name": "password", "in": "formData", "required": true, "type": "string", "format": "password" }
+          { "name": "email", "in": "formData", "required": true, "type": "string" },
+          { "name": "password", "in": "formData", "required": true, "type": "string" }
         ],
         "responses": {
           "200": { "description": "Authenticated, token returned" },
@@ -96,15 +97,14 @@
         "tags": ["Auth"],
         "summary": "Verify OTP",
         "consumes": ["multipart/form-data"],
-        "parameters": [
-          { "name": "email", "in": "formData", "required": true, "type": "string", "format": "email" },
-          { "name": "otp", "in": "formData", "required": true, "type": "string" }
-        ],
         "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "email", "in": "formData", "type": "string", "required": true },
+          { "name": "otp", "in": "formData", "type": "string", "required": true }
+        ],
         "responses": {
           "200": { "description": "OTP verified successfully" },
-          "401": { "description": "Invalid or expired OTP" },
-          "422": { "description": "Validation error" }
+          "401": { "description": "Invalid or expired OTP" }
         }
       }
     },
@@ -114,14 +114,12 @@
         "tags": ["Auth"],
         "summary": "Resend OTP",
         "consumes": ["multipart/form-data"],
-        "parameters": [
-          { "name": "email", "in": "formData", "required": true, "type": "string", "format": "email" }
-        ],
         "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "email", "in": "formData", "type": "string", "required": true }
+        ],
         "responses": {
-          "200": { "description": "OTP resent successfully" },
-          "422": { "description": "Validation error" },
-          "401": { "description": "Unauthorized" }
+          "200": { "description": "OTP resent successfully" }
         }
       }
     },
@@ -132,8 +130,7 @@
         "summary": "Disable 2FA",
         "security": [{ "BearerAuth": [] }],
         "responses": {
-          "200": { "description": "2FA disabled" },
-          "401": { "description": "Unauthorized" }
+          "200": { "description": "2FA disabled" }
         }
       }
     },
@@ -144,8 +141,7 @@
         "summary": "Enable 2FA",
         "security": [{ "BearerAuth": [] }],
         "responses": {
-          "200": { "description": "2FA enabled, QR or secret returned" },
-          "401": { "description": "Unauthorized" }
+          "200": { "description": "2FA enabled" }
         }
       }
     },
@@ -156,8 +152,7 @@
         "summary": "Get current user profile",
         "security": [{ "BearerAuth": [] }],
         "responses": {
-          "200": { "description": "User profile returned" },
-          "401": { "description": "Unauthorized" }
+          "200": { "description": "User profile returned" }
         }
       }
     },
@@ -168,8 +163,7 @@
         "summary": "Get security settings",
         "security": [{ "BearerAuth": [] }],
         "responses": {
-          "200": { "description": "Security settings returned" },
-          "401": { "description": "Unauthorized" }
+          "200": { "description": "Security settings returned" }
         }
       }
     },
@@ -180,8 +174,7 @@
         "summary": "Get preferences",
         "security": [{ "BearerAuth": [] }],
         "responses": {
-          "200": { "description": "Preferences returned" },
-          "401": { "description": "Unauthorized" }
+          "200": { "description": "Preferences returned" }
         }
       },
       "put": {
@@ -190,13 +183,11 @@
         "consumes": ["multipart/form-data"],
         "security": [{ "BearerAuth": [] }],
         "parameters": [
-          { "name": "language", "in": "formData", "type": "string", "required": false },
-          { "name": "currency", "in": "formData", "type": "string", "required": false }
+          { "name": "language", "in": "formData", "type": "string" },
+          { "name": "currency", "in": "formData", "type": "string" }
         ],
         "responses": {
-          "200": { "description": "Preferences updated" },
-          "422": { "description": "Validation error" },
-          "401": { "description": "Unauthorized" }
+          "200": { "description": "Preferences updated" }
         }
       }
     },
@@ -208,12 +199,10 @@
         "consumes": ["multipart/form-data"],
         "security": [{ "BearerAuth": [] }],
         "parameters": [
-          { "name": "avatar", "in": "formData", "required": true, "type": "file" }
+          { "name": "avatar", "in": "formData", "type": "file", "required": true }
         ],
         "responses": {
-          "200": { "description": "Avatar uploaded" },
-          "401": { "description": "Unauthorized" },
-          "422": { "description": "Validation error" }
+          "200": { "description": "Avatar uploaded" }
         }
       }
     },
@@ -223,7 +212,9 @@
         "tags": ["User"],
         "summary": "Remove avatar",
         "security": [{ "BearerAuth": [] }],
-        "responses": { "200": { "description": "Avatar removed" }, "401": { "description":"Unauthorized" } }
+        "responses": {
+          "200": { "description": "Avatar removed" }
+        }
       }
     },
 
@@ -232,156 +223,409 @@
         "tags": ["Transactions"],
         "summary": "Get statistics",
         "security": [{ "BearerAuth": [] }],
-        "responses": { "200":{ "description":"Statistics"}, "401":{ "description":"Unauthorized"} }
+        "responses": {
+          "200": { "description": "Statistics" }
+        }
       }
     },
 
     "/transactions": {
-      "get": { "tags":["Transactions"], "summary":"List all transactions","security":[{ "BearerAuth":[] }],"responses":{ "200":{"description":"List"} } },
+      "get": {
+        "tags": ["Transactions"],
+        "summary": "List all transactions",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "List" } }
+      },
       "post": {
-        "tags":["Transactions"],
-        "summary":"Create transaction",
-        "consumes":["multipart/form-data"],
-        "security":[{ "BearerAuth":[] }],
-        "parameters":[
-          { "name":"amount","in":"formData","type":"number","format":"float","required":true },
-          { "name":"category_id","in":"formData","type":"integer","required":false },
-          { "name":"notes","in":"formData","type":"string","required":false }
+        "tags": ["Transactions"],
+        "summary": "Create transaction",
+        "consumes": ["multipart/form-data"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "amount", "in": "formData", "type": "number", "required": true },
+          { "name": "category_id", "in": "formData", "type": "integer" },
+          { "name": "notes", "in": "formData", "type": "string" }
         ],
-        "responses":{ "201":{"description":"Created"},"422":{"description":"Validation error"},"401":{"description":"Unauthorized"} }
+        "responses": {
+          "201": { "description": "Created" }
+        }
       }
     },
 
     "/transactions/{transaction}": {
-      "parameters":[ { "name":"transaction","in":"path","type":"integer","required":true } ],
-      "get":{ "tags":["Transactions"], "summary":"Get transaction","security":[{ "BearerAuth":[] }],"responses":{ "200":{"description":"Transaction"}, "404":{"description":"Not found"} } },
-      "put":{ "tags":["Transactions"], "summary":"Update transaction","consumes":["multipart/form-data"],"security":[{ "BearerAuth":[] }],"parameters":[ { "name":"amount","in":"formData","type":"number","format":"float","required":false } ], "responses":{ "200":{"description":"Updated"},"422":{"description":"Validation error"} } },
-      "delete":{ "tags":["Transactions"], "summary":"Delete transaction","security":[{ "BearerAuth":[] }],"responses":{ "204":{"description":"Deleted"},"404":{"description":"Not found"} } }
+      "parameters": [
+        { "name": "transaction", "in": "path", "type": "integer", "required": true }
+      ],
+      "get": {
+        "tags": ["Transactions"],
+        "summary": "Get transaction",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Transaction" }
+        }
+      },
+      "put": {
+        "tags": ["Transactions"],
+        "summary": "Update transaction",
+        "consumes": ["multipart/form-data"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "amount", "in": "formData", "type": "number" }
+        ],
+        "responses": {
+          "200": { "description": "Updated" }
+        }
+      },
+      "delete": {
+        "tags": ["Transactions"],
+        "summary": "Delete transaction",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "204": { "description": "Deleted" } }
+      }
     },
 
     "/categories": {
-      "get":{ "tags":["Categories"], "summary":"List categories","security":[{ "BearerAuth":[] }],"responses":{ "200":{"description":"Category list"} } },
-      "post":{ "tags":["Categories"], "summary":"Create category","consumes":["multipart/form-data"],"security":[{ "BearerAuth":[] }],"parameters":[ { "name":"name","in":"formData","type":"string","required":true } ],"responses":{ "201":{"description":"Created"},"422":{"description":"Validation error"} } }
+      "get": {
+        "tags": ["Categories"],
+        "summary": "List categories",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Categories list" } }
+      },
+      "post": {
+        "tags": ["Categories"],
+        "summary": "Create category",
+        "consumes": ["multipart/form-data"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "name", "in": "formData", "type": "string", "required": true }
+        ],
+        "responses": { "201": { "description": "Created" } }
+      }
     },
 
     "/categories/{category}": {
-      "parameters":[ { "name":"category","in":"path","type":"integer","required":true } ],
-      "get":{ "tags":["Categories"], "summary":"Get category","security":[{ "BearerAuth":[] }],"responses":{ "200":{"description":"Category"}, "404":{"description":"Not found"} } },
-      "put":{ "tags":["Categories"], "summary":"Update category","consumes":["multipart/form-data"],"security":[{ "BearerAuth":[] }],"parameters":[ { "name":"name","in":"formData","type":"string","required":false } ],"responses":{ "200":{"description":"Updated"},"422":{"description":"Validation error"} } },
-      "delete":{ "tags":["Categories"], "summary":"Delete category","security":[{ "BearerAuth":[] }],"responses":{ "204":{"description":"Deleted"} } }
+      "parameters": [
+        { "name": "category", "in": "path", "type": "integer", "required": true }
+      ],
+      "get": {
+        "tags": ["Categories"],
+        "summary": "Get category",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Category" } }
+      },
+      "put": {
+        "tags": ["Categories"],
+        "summary": "Update category",
+        "consumes": ["multipart/form-data"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "name", "in": "formData", "type": "string" }
+        ],
+        "responses": { "200": { "description": "Updated" } }
+      },
+      "delete": {
+        "tags": ["Categories"],
+        "summary": "Delete category",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "204": { "description": "Deleted" } }
+      }
     },
 
     "/receipts": {
-      "get":{ "tags":["Receipts"], "summary":"List receipts","security":[{ "BearerAuth":[] }],"responses":{ "200":{"description":"Receipts list"} } },
-      "post":{ "tags":["Receipts"], "summary":"Upload receipt","consumes":["multipart/form-data"],"security":[{ "BearerAuth":[] }],"parameters":[ { "name":"file","in":"formData","type":"file","required":true } ],"responses":{ "201":{"description":"Uploaded"}, "422":{"description":"Validation error"} } }
+      "get": {
+        "tags": ["Receipts"],
+        "summary": "List receipts",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Receipts list" } }
+      },
+      "post": {
+        "tags": ["Receipts"],
+        "summary": "Upload receipt",
+        "consumes": ["multipart/form-data"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "file", "in": "formData", "type": "file", "required": true }
+        ],
+        "responses": { "201": { "description": "Uploaded" } }
+      }
     },
 
     "/receipts/{receipt}/download": {
-      "parameters":[ { "name":"receipt","in":"path","type":"integer","required":true } ],
-      "get":{ "tags":["Receipts"], "summary":"Download receipt","security":[{ "BearerAuth":[] }],"responses":{ "200":{"description":"File stream"}, "404":{"description":"Not found"} } }
+      "parameters": [
+        { "name": "receipt", "in": "path", "type": "integer", "required": true }
+      ],
+      "get": {
+        "tags": ["Receipts"],
+        "summary": "Download receipt",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "File stream" } }
+      }
     },
 
     "/groups": {
-      "get":{ "tags":["Groups"], "summary":"List groups","security":[{ "BearerAuth":[] }],"responses":{ "200":{"description":"Groups list"} } },
-      "post":{ "tags":["Groups"], "summary":"Create group","consumes":["multipart/form-data"],"security":[{ "BearerAuth":[] }],"parameters":[ { "name":"name","in":"formData","type":"string","required":true } ],"responses":{ "201":{"description":"Created"}, "422":{"description":"Validation error"} } }
+      "get": {
+        "tags": ["Groups"],
+        "summary": "List all groups",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Groups list" } }
+      },
+      "post": {
+        "tags": ["Groups"],
+        "summary": "Create group",
+        "consumes": ["multipart/form-data"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "name", "in": "formData", "type": "string", "required": true },
+          { "name": "description", "in": "formData", "type": "string" },
+          { "name": "type", "in": "formData", "type": "string", "enum": ["family", "friends", "work"], "required": true }
+        ],
+        "responses": { "201": { "description": "Group created" } }
+      }
     },
 
     "/groups/{group}": {
-      "parameters":[ { "name":"group","in":"path","type":"integer","required":true } ],
-      "get":{ "tags":["Groups"], "summary":"Get single group","security":[{ "BearerAuth":[] }],"responses":{ "200":{"description":"Group"}, "404":{"description":"Not found"} } },
-      "delete":{ "tags":["Groups"], "summary":"Delete group","security":[{ "BearerAuth":[] }], "responses":{ "204":{"description":"Deleted"} } }
+      "parameters": [
+        { "name": "group", "in": "path", "type": "integer", "required": true }
+      ],
+      "get": {
+        "tags": ["Groups"],
+        "summary": "Get group",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Group details" } }
+      },
+      "delete": {
+        "tags": ["Groups"],
+        "summary": "Delete group",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "204": { "description": "Deleted" } }
+      }
     },
 
     "/groups/{group}/members": {
-      "parameters":[ { "name":"group","in":"path","type":"integer","required":true } ],
-      "get":{ "tags":["Groups"], "summary":"List members","security":[{ "BearerAuth":[] }],"responses":{ "200":{"description":"Members list"} } }
+      "parameters": [
+        { "name": "group", "in": "path", "type": "integer", "required": true }
+      ],
+      "get": {
+        "tags": ["Groups"],
+        "summary": "List group members",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Members list" } }
+      }
     },
 
     "/groups/{group}/invite": {
-      "parameters":[ { "name":"group","in":"path","type":"integer","required":true } ],
-      "post":{ "tags":["Groups"], "summary":"Invite member","consumes":["multipart/form-data"],"security":[{ "BearerAuth":[] }],"parameters":[ { "name":"email","in":"formData","type":"string","format":"email","required":true } ],"responses":{ "200":{"description":"Invited"}, "422":{"description":"Validation error"} } }
+      "parameters": [
+        { "name": "group", "in": "path", "type": "integer", "required": true }
+      ],
+      "post": {
+        "tags": ["Groups"],
+        "summary": "Invite member",
+        "consumes": ["multipart/form-data"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "name", "in": "formData", "type": "string", "required": true },
+          { "name": "email", "in": "formData", "type": "string", "required": true }
+
+        ],
+        "responses": { "200": { "description": "Invited" } }
+      }
     },
 
     "/groups/{group}/members/{member}": {
-      "parameters":[ { "name":"group","in":"path","type":"integer","required":true }, { "name":"member","in":"path","type":"string","required":true } ],
-      "delete":{ "tags":["Groups"], "summary":"Remove member","security":[{ "BearerAuth":[] }],"responses":{ "200":{"description":"Removed"},"404":{"description":"Not found"} } }
+      "parameters": [
+        { "name": "group", "in": "path", "type": "integer", "required": true },
+        { "name": "member", "in": "path", "type": "string", "required": true }
+      ],
+      "delete": {
+        "tags": ["Groups"],
+        "summary": "Remove member",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Member removed" } }
+      }
     },
 
     "/groups/{group}/split": {
-      "parameters":[ { "name":"group","in":"path","type":"integer","required":true } ],
-      "post":{ "tags":["Groups"], "summary":"Split expense","security":[{ "BearerAuth":[] }],"responses":{ "200":{"description":"Splitted"},"422":{"description":"Validation error"} } }
+      "parameters": [
+        { "name": "group", "in": "path", "type": "integer", "required": true }
+      ],
+      "post": {
+        "tags": ["Groups"],
+        "summary": "Split group expense",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Expense split" } }
+      }
     },
 
     "/auth/updatePassword/send-otp": {
-      "post":{
-        "tags":["Auth"],
-        "summary":"Send OTP for password update",
-        "consumes":["multipart/form-data"],
-        "security":[{ "BearerAuth":[] }],
-        "parameters":[ { "name":"email","in":"formData","type":"string","format":"email","required":true } ],
-        "responses":{ "200":{"description":"OTP sent"},"422":{"description":"Validation error"} }
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Send OTP for password update",
+        "consumes": ["multipart/form-data"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "email", "in": "formData", "type": "string", "required": true }
+        ],
+        "responses": { "200": { "description": "OTP sent" } }
       }
     },
 
     "/budgets": {
-      "get":{ "tags":["Budgets"], "summary":"List budgets","security":[{ "BearerAuth":[] }],"responses":{ "200":{"description":"Budgets list"} } },
-      "post":{ "tags":["Budgets"], "summary":"Create budget","consumes":["multipart/form-data"],"security":[{ "BearerAuth":[] }],"parameters":[ { "name":"limit","in":"formData","type":"number","format":"float","required":true } ],"responses":{ "201":{"description":"Created"},"422":{"description":"Validation error"} } }
+      "get": {
+        "tags": ["Budgets"],
+        "summary": "List budgets",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Budgets list" } }
+      },
+      "post": {
+        "tags": ["Budgets"],
+        "summary": "Create budget",
+        "consumes": ["multipart/form-data"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "name", "in":"formData", "type": "string", "required":true},
+          { "name": "amount", "in": "formData", "type": "number", "required": true },
+          { "name": "start_date", "in": "formData", "type": "string", "format": "date", "required": true },
+          { "name": "end_date", "in": "formData", "type": "string", "format": "date", "required": true },
+          { "name": "period", "in": "formData", "type": "string", "enum": ["weekly","monthly", "yearly"], "required": true }
+        ],
+        "responses": { "201": { "description": "Created" } }
+      }
     },
 
     "/reports/spending": {
-      "get":{ "tags":["Reports"], "summary":"Spending report","security":[{ "BearerAuth":[] }],"responses":{ "200":{"description":"Report data"} } }
+      "get": {
+        "tags": ["Reports"],
+        "summary": "Spending report",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Report data" } }
+      }
     },
 
     "/reports/{report}/export": {
-      "parameters":[ { "name":"report","in":"path","type":"string","required":true } ],
-      "get":{ "tags":["Reports"], "summary":"Export report","security":[{ "BearerAuth":[] }],"responses":{ "200":{"description":"Export file"}, "404":{ "description":"Not found"} } }
+      "parameters": [
+        {"name": "report", "in": "path", "type": "string", "required": true },
+        { "name": "format", "in": "query", "type": "string", "enum": ["pdf", "csv"], "required": true },
+        { "name": "type", "in": "query", "type": "string", "enum": ["all", "income", "expense"], "required": false }
+      ],
+      "get": {
+        "tags": ["Reports"],
+        "summary": "Export spending report",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Exported file" } }
+      }
     },
 
     "/insights": {
-      "get":{ "tags":["Insights"], "summary":"Get insights","security":[{ "BearerAuth":[] }],"responses":{ "200":{"description":"Insights data"} } }
+      "get": {
+        "tags": ["Insights"],
+        "summary": "Get insights",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Insights data" } }
+      }
     },
 
     "/notifications": {
-      "get":{ "tags":["Notifications"], "summary":"List notifications","security":[{ "BearerAuth":[] }],"responses":{ "200":{"description":"Notifications"} } }
+      "get": {
+        "tags": ["Notifications"],
+        "summary": "List notifications",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Notifications list" } }
+      }
     },
 
     "/notifications/unread-count": {
-      "get":{ "tags":["Notifications"], "summary":"Unread count","security":[{ "BearerAuth":[] }],"responses":{ "200":{"description":"Count"} } }
+      "get": {
+        "tags": ["Notifications"],
+        "summary": "Get unread count",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Count returned" } }
+      }
     },
 
     "/notifications/{notification}/mark-read": {
-      "parameters":[ { "name":"notification","in":"path","type":"string","required":true } ],
-      "post":{ "tags":["Notifications"], "summary":"Mark read","security":[{ "BearerAuth":[] }],"responses":{ "200":{"description":"Marked read"} } }
+      "parameters": [
+        { "name": "notification", "in": "path", "type": "string", "required": true }
+      ],
+      "post": {
+        "tags": ["Notifications"],
+        "summary": "Mark notification read",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Marked read" } }
+      }
     },
 
     "/notifications/mark-all-read": {
-      "post":{ "tags":["Notifications"], "summary":"Mark all read","security":[{ "BearerAuth":[] }],"responses":{ "200":{"description":"All read marked"} } }
+      "post": {
+        "tags": ["Notifications"],
+        "summary": "Mark all as read",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "All marked read" } }
+      }
     },
 
     "/sync/transactions": {
-      "post":{ "tags":["Sync"], "summary":"Sync transactions","security":[{ "BearerAuth":[] }],"responses":{ "200":{"description":"Sync result"} } }
+      "post": {
+        "tags": ["Sync"],
+        "summary": "Sync transactions",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Sync success" } }
+      }
     },
 
     "/voice/parse": {
-      "post":{ "tags":["VoiceQR"], "summary":"Parse voice input","security":[{ "BearerAuth":[] }],"parameters":[ { "name":"audio","in":"formData","type":"file","required":true } ],"responses":{ "200":{"description":"Voice parsed"},"422":{"description":"Validation error"} } }
+      "post": {
+        "tags": ["VoiceQR"],
+        "summary": "Parse voice input",
+        "consumes": ["multipart/form-data"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "audio", "in": "formData", "type": "file", "required": true }
+        ],
+        "responses": { "200": { "description": "Voice parsed" } }
+      }
     },
 
     "/qr/parse": {
-      "post":{ "tags":["VoiceQR"], "summary":"Parse QR input","security":[{ "BearerAuth":[] }],"parameters":[ { "name":"image","in":"formData","type":"file","required":true } ],"responses":{ "200":{"description":"QR parsed"},"422":{"description":"Validation error"} } }
+      "post": {
+        "tags": ["VoiceQR"],
+        "summary": "Parse QR input",
+        "consumes": ["multipart/form-data"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "image", "in": "formData", "type": "file", "required": true }
+        ],
+        "responses": { "200": { "description": "QR parsed" } }
+      }
     },
 
     "/admin/users": {
-      "get":{ "tags":["Admin"], "summary":"List all users (Admin)","security":[{ "BearerAuth":[] }],"responses":{ "200":{"description":"Users list"},"403":{"description":"Forbidden"} } }
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Admin: List users",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Users list" } }
+      }
     },
 
     "/admin/transactions": {
-      "get":{ "tags":["Admin"], "summary":"List all transactions (Admin)","security":[{ "BearerAuth":[] }],"responses":{ "200":{"description":"Transactions list"},"403":{"description":"Forbidden"} } }
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Admin: List transactions",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Transactions list" } }
+      }
     },
 
     "/admin/impersonate/{user}": {
-      "parameters":[ { "name":"user","in":"path","type":"integer","required":true } ],
-      "post":{ "tags":["Admin"], "summary":"Impersonate user (Admin)","security":[{ "BearerAuth":[] }],"responses":{ "200":{"description":"Impersonated"},"403":{"description":"Forbidden"} } }
+      "parameters": [
+        { "name": "user", "in": "path", "type": "integer", "required": true }
+      ],
+      "post": {
+        "tags": ["Admin"],
+        "summary": "Admin: Impersonate user",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Impersonation started" } }
+      }
     }
-
   }
 }
