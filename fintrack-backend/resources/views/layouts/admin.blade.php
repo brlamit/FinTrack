@@ -70,46 +70,36 @@
         </div>
     </nav>
 
+    {{-- Main content area --}}
     <div class="container mt-4">
+       
+     <!-- Flash Messages -->
         @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show auto-dismiss" role="alert"></div>
+            <div class="alert alert-success alert-dismissible fade show" role="alert" id="flash-success">
                 {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         @endif
         @if(session('error'))
-            <div class="alert alert-danger alert-dismissible fade show auto-dismiss" role="alert">
+            <div class="alert alert-danger alert-dismissible fade show" role="alert" id="flash-error">
                 {{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         @endif
-        @if(session('warning'))
-            <div class="alert alert-warning alert-dismissible fade show auto-dismiss" role="alert">
-                {{ session('warning') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
-        @if(session('info'))
-            <div class="alert alert-info alert-dismissible fade show auto-dismiss" role="alert">
-                {{ session('info') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
-
-        <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            document.querySelectorAll('.auto-dismiss').forEach(function (el) {
-                setTimeout(function () {
-                    el.classList.remove('show');
-                    setTimeout(function () { el.remove(); }, 200);
-                }, 7000);
-            });
-        });
-        </script>
+   
 
         @yield('content')
     </div>
-
+        <!-- Auto-hide flash messages -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('#flash-success, #flash-error').forEach(alert => {
+                setTimeout(() => {
+                    bootstrap.Alert.getOrCreateInstance(alert).close();
+                }, 7000);
+            });
+        });
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     @stack('scripts')
