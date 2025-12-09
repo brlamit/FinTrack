@@ -243,6 +243,8 @@
         "security": [{ "BearerAuth": [] }],
         "parameters": [
           { "name": "amount", "in": "formData", "type": "number", "required": true },
+          { "name": "type", "in": "formData", "type": "string", "enum": ["income", "expense"], "required": true },
+          { "name": "transaction_date", "in": "formData", "type": "string", "format": "date", "required": true },
           { "name": "category_id", "in": "formData", "type": "integer" },
           { "name": "notes", "in": "formData", "type": "string" }
         ],

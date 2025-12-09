@@ -298,6 +298,11 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
+    public function canViewPersonalTransactions(): bool
+    {
+        return (bool) ($this->can_view_personal_transactions ?? false);
+    }
+
     public function isActive(): bool
     {
         return $this->status === 'active';

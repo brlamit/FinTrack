@@ -32,7 +32,18 @@
         <div class="col-md-2">
             <input type="date" name="date_to" class="form-control" value="{{ request('date_to') }}">
         </div>
-        <div class="col-md-2">
+        @can('view_personal_transactions')
+        <div class="col-md-3">
+            <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" value="1" id="includePersonal" name="include_personal" {{ request('include_personal') ? 'checked' : '' }}>
+                <label class="form-check-label" for="includePersonal">
+                    Include personal transactions (requires reason)
+                </label>
+            </div>
+            <input type="text" name="reason" class="form-control mt-2" placeholder="Reason for inclusion" value="{{ request('reason') }}">
+        </div>
+        @endcan
+        <div class="col-md-2 d-flex align-items-end">
             <button type="submit" class="btn btn-primary w-100">Filter</button>
         </div>
     </div>
