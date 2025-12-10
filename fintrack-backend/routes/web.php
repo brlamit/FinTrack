@@ -81,6 +81,16 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('/profile/avatar/remove', [ProfileController::class, 'removeAvatar'])->name('avatar.remove');
     Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    
+    // Admin security routes
+    Route::get('/security', [ProfileController::class, 'security'])->name('security');
+    Route::put('/password', [ProfileController::class, 'updatePassword'])->name('update-password');
+    Route::post('/logout-all', [ProfileController::class, 'logoutAll'])->name('logout-all');
+    
+    // Admin preferences routes
+    Route::get('/preferences', [ProfileController::class, 'preferences'])->name('preferences');
+    Route::put('/preferences', [ProfileController::class, 'updatePreferences'])->name('update-preferences');
+    
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/users', [AdminController::class, 'users'])->name('users');
     Route::get('/transactions', [AdminController::class, 'transactions'])->name('transactions');
