@@ -321,19 +321,23 @@
         } catch (err) { console.error(err); }
     }
 
-    function updateSummary(summary) {
-        const fmt = (v)=> typeof v === 'number' ? v.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) : (v || '0.00');
-        document.getElementById('summaryExpenses').textContent = summary.total_expenses ? fmt(summary.total_expenses) : '0.00';
-        document.getElementById('summaryCount').textContent = summary.transaction_count ?? '0';
-        // Net isn't provided by spending endpoint; fetch income quickly
-        (async ()=>{
-            try {
-                const resp = await fetch('/api/reports/spending?start_date=' + (document.getElementById('globalStart').value) + '&end_date=' + (document.getElementById('globalEnd').value) + '&group_by=month', { credentials: 'same-origin' });
-            } catch (_){}
-            // Best-effort: compute net by subtracting expenses from summary.assets if available; left as placeholder
-            document.getElementById('summaryNet').textContent = '—';
-        })();
-    }
+function updateSummary(summary) {
+    const fmt = (v) =>
+        typeof v === 'number'
+            ? v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            : (v || '0.00');
+
+    const totalExpenses = Number(summary.total_expenses ?? 0);
+    const totalIncome   = Number(summary.total_income ?? 0);
+    const net           = Number(summary.net ?? (totalIncome - totalExpenses));
+
+    document.getElementById('summaryExpenses').textContent = fmt(totalExpenses);
+    document.getElementById('summaryCount').textContent    = summary.transaction_count ?? '0';
+
+    const netEl = document.getElementById('summaryNet');
+    const sign  = net >= 0 ? '+' : '−';
+    netEl.textContent = sign + fmt(Math.abs(net));
+}
 
     function downloadChartAsImage(chart, filename) {
         try {
