@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use App\Models\Goal;
 
 class UserController extends Controller
 {
@@ -28,382 +29,537 @@ class UserController extends Controller
     /**
      * Show user dashboard
      */
-    public function dashboard(Request $request)
-    {
-        $user = $request->user();
+  
+public function dashboard(Request $request)
+{
+    $user = $request->user();
 
-        $chartPeriodSelection = (string) $request->input('chart_period', '3');
-        $allowedPeriods = ['1', '3', '6', 'custom'];
-        if (!in_array($chartPeriodSelection, $allowedPeriods, true)) {
-            $chartPeriodSelection = '3';
+    $chartPeriodSelection = (string) $request->input('chart_period', '3');
+    $allowedPeriods = ['1', '3', '6', 'custom'];
+    if (!in_array($chartPeriodSelection, $allowedPeriods, true)) {
+        $chartPeriodSelection = '3';
+    }
+
+    $chartEndParam = $request->input('chart_end');
+    $chartEndMonth = Carbon::now()->startOfMonth();
+    if ($chartEndParam) {
+        try {
+            $candidateEnd = Carbon::createFromFormat('Y-m', $chartEndParam)->startOfMonth();
+            if ($candidateEnd->lessThanOrEqualTo(Carbon::now()->startOfMonth())) {
+                $chartEndMonth = $candidateEnd;
+            }
+        } catch (\Exception $e) {
+            // ignore invalid format and keep default
         }
+    }
 
-        $chartEndParam = $request->input('chart_end');
-        $chartEndMonth = Carbon::now()->startOfMonth();
-        if ($chartEndParam) {
+    $chartStartMonth = null;
+    if ($chartPeriodSelection === 'custom') {
+        $chartStartParam = $request->input('chart_start');
+        if ($chartStartParam) {
             try {
-                $candidateEnd = Carbon::createFromFormat('Y-m', $chartEndParam)->startOfMonth();
-                if ($candidateEnd->lessThanOrEqualTo(Carbon::now()->startOfMonth())) {
-                    $chartEndMonth = $candidateEnd;
-                }
+                $chartStartMonth = Carbon::createFromFormat('Y-m', $chartStartParam)->startOfMonth();
             } catch (\Exception $e) {
-                // ignore invalid format and keep default
+                // fall back to default range
             }
         }
 
-        $chartStartMonth = null;
-        if ($chartPeriodSelection === 'custom') {
-            $chartStartParam = $request->input('chart_start');
-            if ($chartStartParam) {
-                try {
-                    $chartStartMonth = Carbon::createFromFormat('Y-m', $chartStartParam)->startOfMonth();
-                } catch (\Exception $e) {
-                    // fall back to default range
-                }
-            }
-
-            if (!$chartStartMonth) {
-                $chartStartMonth = $chartEndMonth->copy()->subMonths(2)->startOfMonth();
-            }
-
-            if ($chartStartMonth->greaterThan($chartEndMonth)) {
-                $chartStartMonth = $chartEndMonth->copy();
-            }
-        } else {
-            $monthsBack = (int) $chartPeriodSelection;
-            $chartStartMonth = $chartEndMonth->copy()->subMonths(max($monthsBack - 1, 0))->startOfMonth();
+        if (!$chartStartMonth) {
+            $chartStartMonth = $chartEndMonth->copy()->subMonths(2)->startOfMonth();
         }
 
-        $chartMonthsCount = max($chartStartMonth->diffInMonths($chartEndMonth) + 1, 1);
-
-        $categoryChartType = $request->input('category_type', 'expense');
-        if (!in_array($categoryChartType, ['income', 'expense'], true)) {
-            $categoryChartType = 'expense';
+        if ($chartStartMonth->greaterThan($chartEndMonth)) {
+            $chartStartMonth = $chartEndMonth->copy();
         }
+    } else {
+        $monthsBack = (int) $chartPeriodSelection;
+        $chartStartMonth = $chartEndMonth->copy()->subMonths(max($monthsBack - 1, 0))->startOfMonth();
+    }
 
-        $overallIncome = Transaction::query()
-            ->where('user_id', $user->id)
-            ->whereNull('group_id')
-            ->where('type', 'income')
-            ->sum('amount');
+    $chartMonthsCount = max($chartStartMonth->diffInMonths($chartEndMonth) + 1, 1);
 
-        $overallExpense = Transaction::query()
-            ->where('user_id', $user->id)
-            ->whereNull('group_id')
-            ->where('type', 'expense')
-            ->sum('amount');
-        $totalNet = $overallIncome - $overallExpense;
-        $overallExpenseRatio = $overallIncome > 0
-            ? min(max(($overallExpense / max($overallIncome, 1)) * 100, 0), 100)
-            : null;
+    $categoryChartType = $request->input('category_type', 'expense');
+    if (!in_array($categoryChartType, ['income', 'expense'], true)) {
+        $categoryChartType = 'expense';
+    }
 
-        $startOfMonth = $chartEndMonth->copy()->startOfMonth();
-        $endOfMonth = $chartEndMonth->copy()->endOfMonth();
+    $overallIncome = Transaction::query()
+        ->where('user_id', $user->id)
+        ->whereNull('group_id')
+        ->where('type', 'income')
+        ->sum('amount');
 
-        $monthlyIncome = Transaction::query()
-            ->where('user_id', $user->id)
-            ->whereNull('group_id')
-            ->where('type', 'income')
-            ->whereBetween(DB::raw('COALESCE(transaction_date, created_at)'), [$startOfMonth, $endOfMonth])
-            ->sum('amount');
+    $overallExpense = Transaction::query()
+        ->where('user_id', $user->id)
+        ->whereNull('group_id')
+        ->where('type', 'expense')
+        ->sum('amount');
 
-        $monthlyExpense = Transaction::query()
-            ->where('user_id', $user->id)
-            ->whereNull('group_id')
-            ->where('type', 'expense')
-            ->whereBetween(DB::raw('COALESCE(transaction_date, created_at)'), [$startOfMonth, $endOfMonth])
-            ->sum('amount');
+    $totalNet = $overallIncome - $overallExpense;
+    $overallExpenseRatio = $overallIncome > 0
+        ? min(max(($overallExpense / max($overallIncome, 1)) * 100, 0), 100)
+        : null;
 
-        $monthNet = $monthlyIncome - $monthlyExpense;
+    $startOfMonth = $chartEndMonth->copy()->startOfMonth();
+    $endOfMonth = $chartEndMonth->copy()->endOfMonth();
 
-        $now = Carbon::now();
-        $daysInSelectedMonth = $chartEndMonth->daysInMonth;
-        $daysElapsed = $chartEndMonth->isSameMonth($now)
-            ? min($now->day, $daysInSelectedMonth)
-            : $daysInSelectedMonth;
-        $averageDailyExpense = $daysElapsed > 0 ? $monthlyExpense / $daysElapsed : 0.0;
-        $projectedExpense = $averageDailyExpense * $daysInSelectedMonth;
-        $savingRate = $monthlyIncome > 0
-            ? (($monthlyIncome - $monthlyExpense) / $monthlyIncome) * 100
-            : null;
+    $monthlyIncome = Transaction::query()
+        ->where('user_id', $user->id)
+        ->whereNull('group_id')
+        ->where('type', 'income')
+        ->whereBetween(DB::raw('COALESCE(transaction_date, created_at)'), [$startOfMonth, $endOfMonth])
+        ->sum('amount');
 
-        $formatCurrency = static function (float $amount): string {
-            $sign = $amount < 0 ? '-$' : '$';
-            return $sign . number_format(abs($amount), 2);
-        };
+    $monthlyExpense = Transaction::query()
+        ->where('user_id', $user->id)
+        ->whereNull('group_id')
+        ->where('type', 'expense')
+        ->whereBetween(DB::raw('COALESCE(transaction_date, created_at)'), [$startOfMonth, $endOfMonth])
+        ->sum('amount');
 
-        $dateExpression = DB::raw('COALESCE(transaction_date, created_at)');
+    $monthNet = $monthlyIncome - $monthlyExpense;
 
-        $topExpenseCategoryRow = Transaction::query()
-            ->select('category_id', DB::raw('SUM(amount) as total'))
-            ->where('user_id', $user->id)
-            ->whereNull('group_id')
-            ->where('type', 'expense')
-            ->whereBetween($dateExpression, [$chartStartMonth->copy(), $chartEndMonth->copy()->endOfMonth()])
-            ->groupBy('category_id')
-            ->orderByDesc('total')
-            ->first();
+    $now = Carbon::now();
+    $daysInSelectedMonth = $chartEndMonth->daysInMonth;
+    $daysElapsed = $chartEndMonth->isSameMonth($now)
+        ? min($now->day, $daysInSelectedMonth)
+        : $daysInSelectedMonth;
+
+    $averageDailyExpense = $daysElapsed > 0 ? $monthlyExpense / $daysElapsed : 0.0;
+    $projectedExpense = $averageDailyExpense * $daysInSelectedMonth;
+    $savingRate = $monthlyIncome > 0
+        ? (($monthlyIncome - $monthlyExpense) / $monthlyIncome) * 100
+        : null;
+
+    $formatCurrency = static function (float $amount): string {
+        $sign = $amount < 0 ? '-$' : '$';
+        return $sign . number_format(abs($amount), 2);
+    };
+
+    $dateExpression = DB::raw('COALESCE(transaction_date, created_at)');
+
+    $topExpenseCategoryRow = Transaction::query()
+        ->select('category_id', DB::raw('SUM(amount) as total'))
+        ->where('user_id', $user->id)
+        ->whereNull('group_id')
+        ->where('type', 'expense')
+        ->whereBetween($dateExpression, [$chartStartMonth->copy(), $chartEndMonth->copy()->endOfMonth()])
+        ->groupBy('category_id')
+        ->orderByDesc('total')
+        ->first();
+
+    $topExpenseCategory = [
+        'label' => 'No expenses recorded',
+        'amount' => '$0.00',
+        'share' => null,
+    ];
+
+    if ($topExpenseCategoryRow) {
+        $category = Category::find($topExpenseCategoryRow->category_id);
+        $topExpenseAmount = (float) ($topExpenseCategoryRow->total ?? 0);
 
         $topExpenseCategory = [
-            'label' => 'No expenses recorded',
-            'amount' => '$0.00',
-            'share' => null,
+            'label' => $category?->name ?? 'Uncategorized',
+            'amount' => $formatCurrency($topExpenseAmount),
+            'share' => $monthlyExpense > 0
+                ? round(($topExpenseAmount / $monthlyExpense) * 100, 1)
+                : null,
         ];
+    }
 
-        if ($topExpenseCategoryRow) {
-            $category = Category::find($topExpenseCategoryRow->category_id);
-            $topExpenseAmount = (float) ($topExpenseCategoryRow->total ?? 0);
+    $recentTransactions = Transaction::query()
+        ->where('user_id', $user->id)
+        ->whereNull('group_id')
+        ->with('category')
+        ->orderByRaw('COALESCE(transaction_date, created_at) DESC')
+        ->limit(5)
+        ->get()
+        ->map(function (Transaction $transaction) use ($formatCurrency) {
+            $transactionDate = $transaction->transaction_date ?? $transaction->created_at;
 
-            $topExpenseCategory = [
-                'label' => $category?->name ?? 'Uncategorized',
-                'amount' => $formatCurrency($topExpenseAmount),
-                'share' => $monthlyExpense > 0
-                    ? round(($topExpenseAmount / $monthlyExpense) * 100, 1)
-                    : null,
+            return [
+                'type' => $transaction->type,
+                'description' => $transaction->description,
+                'category_name' => optional($transaction->category)->name,
+                'display_amount' => $formatCurrency((float) ($transaction->amount ?? 0)),
+                'display_date' => $transactionDate?->format('M d, Y'),
+                'is_income' => $transaction->type === 'income',
             ];
-        }
+        });
 
-        $recentTransactions = Transaction::query()
-            ->where('user_id', $user->id)
-            ->whereNull('group_id')
-            ->with('category')
-            ->orderByRaw('COALESCE(transaction_date, created_at) DESC')
-            ->limit(5)
-            ->get()
-            ->map(function (Transaction $transaction) use ($formatCurrency) {
-                $transactionDate = $transaction->transaction_date ?? $transaction->created_at;
+    $categoryCount = Category::query()
+        ->where(function ($query) use ($user) {
+            $query->whereNull('user_id')
+                ->orWhere('user_id', $user->id);
+        })
+        ->count();
 
-                return [
-                    'type' => $transaction->type,
-                    'description' => $transaction->description,
-                    'category_name' => optional($transaction->category)->name,
-                    'display_amount' => $formatCurrency((float) ($transaction->amount ?? 0)),
-                    'display_date' => $transactionDate?->format('M d, Y'),
-                    'is_income' => $transaction->type === 'income',
-                ];
-            });
+    $totalBudgets = Budget::where('user_id', $user->id)->count();
 
-        $categoryCount = Category::query()
-            ->where(function ($query) use ($user) {
-                $query->whereNull('user_id')
-                    ->orWhere('user_id', $user->id);
-            })
-            ->count();
+    $activeBudgets = Budget::query()
+        ->where('user_id', $user->id)
+        ->where('is_active', true)
+        ->with('category')
+        ->limit(3)
+        ->get()
+        ->map(function (Budget $budget) use ($formatCurrency) {
+            $spent = $budget->current_spending;
+            $limit = $budget->amount;
+            $progress = $limit > 0
+                ? min(($spent / $limit) * 100, 100)
+                : 0;
+            $remaining = max($limit - $spent, 0);
 
-        $totalBudgets = Budget::where('user_id', $user->id)->count();
+            $statusLabel = 'On track';
+            $statusClass = 'text-success';
 
-        $activeBudgets = Budget::query()
-            ->where('user_id', $user->id)
-            ->where('is_active', true)
-            ->with('category')
-            ->limit(3)
-            ->get()
-            ->map(function (Budget $budget) use ($formatCurrency) {
-                $spent = $budget->current_spending;
-                $limit = $budget->amount;
-                $progress = $limit > 0
-                    ? min(($spent / $limit) * 100, 100)
-                    : 0;
-                $remaining = max($limit - $spent, 0);
-
-                $statusLabel = 'On track';
-                $statusClass = 'text-success';
-
-                if ($progress >= 100) {
-                    $statusLabel = 'Over limit';
-                    $statusClass = 'text-danger';
-                } elseif ($progress >= 85) {
-                    $statusLabel = 'Near limit';
-                    $statusClass = 'text-warning';
-                } elseif ($progress <= 40) {
-                    $statusLabel = 'Plenty left';
-                    $statusClass = 'text-info';
-                }
-
-                return [
-                    'label' => $budget->category->name ?? 'General',
-                    'spent_formatted' => $formatCurrency((float) $spent),
-                    'limit_formatted' => $formatCurrency((float) $limit),
-                    'progress' => round($progress, 1),
-                    'remaining_formatted' => $formatCurrency((float) $remaining),
-                    'status_label' => $statusLabel,
-                    'status_class' => $statusClass,
-                ];
-            });
-
-        $monthlyChart = [
-            'labels' => [],
-            'income' => [],
-            'expense' => [],
-        ];
-
-        for ($offset = $chartMonthsCount - 1; $offset >= 0; $offset--) {
-            $month = $chartEndMonth->copy()->subMonths($offset);
-            $start = $month->copy()->startOfMonth();
-            $end = $month->copy()->endOfMonth();
-
-            $monthlyChart['labels'][] = $month->format('M Y');
-            $monthlyChart['income'][] = (float) Transaction::query()
-                ->where('user_id', $user->id)
-                ->whereNull('group_id')
-                ->where('type', 'income')
-                ->whereBetween($dateExpression, [$start, $end])
-                ->sum('amount');
-
-            $monthlyChart['expense'][] = (float) Transaction::query()
-                ->where('user_id', $user->id)
-                ->whereNull('group_id')
-                ->where('type', 'expense')
-                ->whereBetween($dateExpression, [$start, $end])
-                ->sum('amount');
-        }
-
-        $categoryBreakdown = Transaction::query()
-            ->select('category_id', DB::raw('SUM(amount) as total'))
-            ->where('user_id', $user->id)
-            ->whereNull('group_id')
-            ->where('type', $categoryChartType)
-            ->groupBy('category_id')
-            ->orderByDesc('total')
-            ->limit(8)
-            ->get();
-
-        $categoryMap = Category::query()
-            ->whereIn('id', $categoryBreakdown->pluck('category_id')->filter()->unique())
-            ->get()
-            ->keyBy('id');
-
-        $categoryChart = [
-            'labels' => [],
-            'values' => [],
-            'colors' => [],
-        ];
-
-        $fallbackColors = ['#4C51BF', '#F56565', '#48BB78', '#ED8936', '#4299E1', '#38B2AC', '#D53F8C', '#718096'];
-        $fallbackIndex = 0;
-
-        foreach ($categoryBreakdown as $row) {
-            $category = $categoryMap->get($row->category_id);
-            $label = $category?->name ?? 'Uncategorized';
-            $color = $category?->color;
-            if (!$color) {
-                $color = $fallbackColors[$fallbackIndex % count($fallbackColors)];
-                $fallbackIndex++;
+            if ($progress >= 100) {
+                $statusLabel = 'Over limit';
+                $statusClass = 'text-danger';
+            } elseif ($progress >= 85) {
+                $statusLabel = 'Near limit';
+                $statusClass = 'text-warning';
+            } elseif ($progress <= 40) {
+                $statusLabel = 'Plenty left';
+                $statusClass = 'text-info';
             }
 
-            $categoryChart['labels'][] = $label;
-            $categoryChart['values'][] = (float) $row->total;
-            $categoryChart['colors'][] = $color;
-        }
-
-        $chartData = [
-            'monthly' => $monthlyChart,
-            'category' => $categoryChart,
-        ];
-
-        // Recent notifications and unread count for dashboard badge
-        $unreadCount = Notification::where('user_id', $user->id)
-            ->where('is_read', false)
-            ->count();
-
-        $recentNotifications = Notification::where('user_id', $user->id)
-            ->orderByDesc('created_at')
-            ->limit(5)
-            ->get();
-
-        $filters = [
-            'chart_period' => $chartPeriodSelection,
-            'category_type' => $categoryChartType,
-            'chart_end' => $chartEndMonth->format('Y-m'),
-            'chart_start' => $chartStartMonth->format('Y-m'),
-        ];
-
-        $chartWindowDescription = $chartStartMonth->equalTo($chartEndMonth)
-            ? $chartEndMonth->format('M Y')
-            : sprintf('%s – %s', $chartStartMonth->format('M Y'), $chartEndMonth->format('M Y'));
-
-        $insights = [
-            [
-                'label' => 'Net this month',
-                'value' => $formatCurrency((float) $monthNet),
-                'description' => $monthNet >= 0
-                    ? 'You are spending within your means this period.'
-                    : 'Spending currently exceeds income for this period.',
-                'class' => $monthNet >= 0 ? 'text-success' : 'text-danger',
-            ],
-            [
-                'label' => 'Avg daily spend',
-                'value' => $formatCurrency((float) $averageDailyExpense),
-                'description' => $chartEndMonth->isSameMonth($now)
-                    ? 'Based on spending recorded so far this month.'
-                    : 'Average daily spending across the selected range.',
-                'class' => 'text-primary',
-            ],
-            [
-                'label' => 'Projected expense',
-                'value' => $formatCurrency((float) $projectedExpense),
-                'description' => 'Estimated total if your current pace continues.',
-                'class' => 'text-warning',
-            ],
-        ];
-
-        if ($savingRate !== null) {
-            $insights[] = [
-                'label' => 'Savings rate',
-                'value' => number_format($savingRate, 1) . '%',
-                'description' => 'Portion of income kept after expenses.',
-                'class' => $savingRate >= 0 ? 'text-success' : 'text-danger',
+            return [
+                'label' => $budget->category->name ?? 'General',
+                'spent_formatted' => $formatCurrency((float) $spent),
+                'limit_formatted' => $formatCurrency((float) $limit),
+                'progress' => round($progress, 1),
+                'remaining_formatted' => $formatCurrency((float) $remaining),
+                'status_label' => $statusLabel,
+                'status_class' => $statusClass,
             ];
+        });
+
+    $monthlyChart = [
+        'labels' => [],
+        'income' => [],
+        'expense' => [],
+    ];
+
+    for ($offset = $chartMonthsCount - 1; $offset >= 0; $offset--) {
+        $month = $chartEndMonth->copy()->subMonths($offset);
+        $start = $month->copy()->startOfMonth();
+        $end = $month->copy()->endOfMonth();
+
+        $monthlyChart['labels'][] = $month->format('M Y');
+        $monthlyChart['income'][] = (float) Transaction::query()
+            ->where('user_id', $user->id)
+            ->whereNull('group_id')
+            ->where('type', 'income')
+            ->whereBetween($dateExpression, [$start, $end])
+            ->sum('amount');
+
+        $monthlyChart['expense'][] = (float) Transaction::query()
+            ->where('user_id', $user->id)
+            ->whereNull('group_id')
+            ->where('type', 'expense')
+            ->whereBetween($dateExpression, [$start, $end])
+            ->sum('amount');
+    }
+
+    $categoryBreakdown = Transaction::query()
+        ->select('category_id', DB::raw('SUM(amount) as total'))
+        ->where('user_id', $user->id)
+        ->whereNull('group_id')
+        ->where('type', $categoryChartType)
+        ->groupBy('category_id')
+        ->orderByDesc('total')
+        ->limit(8)
+        ->get();
+
+    $categoryMap = Category::query()
+        ->whereIn('id', $categoryBreakdown->pluck('category_id')->filter()->unique())
+        ->get()
+        ->keyBy('id');
+
+    $categoryChart = [
+        'labels' => [],
+        'values' => [],
+        'colors' => [],
+    ];
+
+    $fallbackColors = ['#4C51BF', '#F56565', '#48BB78', '#ED8936', '#4299E1', '#38B2AC', '#D53F8C', '#718096'];
+    $fallbackIndex = 0;
+
+    foreach ($categoryBreakdown as $row) {
+        $category = $categoryMap->get($row->category_id);
+        $label = $category?->name ?? 'Uncategorized';
+        $color = $category?->color;
+        if (!$color) {
+            $color = $fallbackColors[$fallbackIndex % count($fallbackColors)];
+            $fallbackIndex++;
         }
 
-        $totalsDisplay = [
+        $categoryChart['labels'][] = $label;
+        $categoryChart['values'][] = (float) $row->total;
+        $categoryChart['colors'][] = $color;
+    }
+
+    $chartData = [
+        'monthly' => $monthlyChart,
+        'category' => $categoryChart,
+    ];
+
+    // Recent notifications and unread count for dashboard badge
+    $unreadCount = Notification::where('user_id', $user->id)
+        ->where('is_read', false)
+        ->count();
+
+    $recentNotifications = Notification::where('user_id', $user->id)
+        ->orderByDesc('created_at')
+        ->limit(5)
+        ->get();
+
+    $filters = [
+        'chart_period' => $chartPeriodSelection,
+        'category_type' => $categoryChartType,
+        'chart_end' => $chartEndMonth->format('Y-m'),
+        'chart_start' => $chartStartMonth->format('Y-m'),
+    ];
+
+    $chartWindowDescription = $chartStartMonth->equalTo($chartEndMonth)
+        ? $chartEndMonth->format('M Y')
+        : sprintf('%s – %s', $chartStartMonth->format('M Y'), $chartEndMonth->format('M Y'));
+
+    $insights = [
+        [
+            'label' => 'Net this month',
+            'value' => $formatCurrency((float) $monthNet),
+            'description' => $monthNet >= 0
+                ? 'You are spending within your means this period.'
+                : 'Spending currently exceeds income for this period.',
+            'class' => $monthNet >= 0 ? 'text-success' : 'text-danger',
+        ],
+        [
+            'label' => 'Avg daily spend',
+            'value' => $formatCurrency((float) $averageDailyExpense),
+            'description' => $chartEndMonth->isSameMonth($now)
+                ? 'Based on spending recorded so far this month.'
+                : 'Average daily spending across the selected range.',
+            'class' => 'text-primary',
+        ],
+        [
+            'label' => 'Projected expense',
+            'value' => $formatCurrency((float) $projectedExpense),
+            'description' => 'Estimated total if your current pace continues.',
+            'class' => 'text-warning',
+        ],
+    ];
+
+    if ($savingRate !== null) {
+        $insights[] = [
+            'label' => 'Savings rate',
+            'value' => number_format($savingRate, 1) . '%',
+            'description' => 'Portion of income kept after expenses.',
+            'class' => $savingRate >= 0 ? 'text-success' : 'text-danger',
+        ];
+    }
+
+    // ===== FINANCIAL GOALS SECTION =====
+    $activeGoals = Goal::query()
+        ->where('user_id', $user->id)
+        ->where('status', 'active')
+        ->orderBy('target_date')
+        ->limit(5)
+        ->get()
+        ->map(function (Goal $goal) use ($formatCurrency) {
+            $progress = $goal->target_amount > 0
+                ? min(($goal->current_amount / $goal->target_amount) * 100, 100)
+                : 0;
+            $remaining = max($goal->target_amount - $goal->current_amount, 0);
+            $isOverdue = $goal->isOverdue();
+            $daysUntilTarget = $goal->target_date ? now()->diffInDays($goal->target_date, false) : null;
+
+            return [
+                'id' => $goal->id,
+                'name' => $goal->name,
+                'description' => $goal->description,
+                'target_amount_formatted' => $formatCurrency((float) $goal->target_amount),
+                'current_amount_formatted' => $formatCurrency((float) $goal->current_amount),
+                'remaining_formatted' => $formatCurrency((float) $remaining),
+                'progress' => round($progress, 1),
+                'target_date' => $goal->target_date?->format('M d, Y'),
+                'days_remaining' => $daysUntilTarget,
+                'is_overdue' => $isOverdue,
+                'status_class' => $isOverdue ? 'text-danger' : ($progress >= 100 ? 'text-success' : 'text-warning'),
+                'status_badge' => $isOverdue ? 'Overdue' : ($progress >= 100 ? 'Completed' : 'In Progress'),
+            ];
+        });
+
+    $goalCount = Goal::where('user_id', $user->id)
+        ->where('status', 'active')
+        ->count();
+
+    // ===== FINANCIAL HEALTH SCORE =====
+    $healthFactors = [];
+
+    // Factor 1: Savings Rate (0-30 points)
+    if ($savingRate !== null && $savingRate >= 0) {
+        $savingRatePoints = min($savingRate / 3, 30); // ~10%+ savings → 30
+        $healthFactors['savings_rate'] = $savingRatePoints;
+    } else {
+        $healthFactors['savings_rate'] = 0;
+    }
+
+    // Factor 2: Budget Adherence (0-25 points)
+    if ($totalBudgets > 0) {
+        $budgetAdherence = $activeBudgets->filter(function ($b) {
+            return data_get($b, 'progress', 0) <= 100;
+        })->count();
+        $healthFactors['budget_adherence'] = ($budgetAdherence / max($totalBudgets, 1)) * 25;
+    } else {
+        $healthFactors['budget_adherence'] = 12.5;
+    }
+
+    // Factor 3: Income Stability (0-20 points)
+    $monthlyIncomes = [];
+    for ($i = 5; $i >= 0; $i--) {
+        $month = $chartEndMonth->copy()->subMonths($i);
+        $monthlyIncomes[] = Transaction::query()
+            ->where('user_id', $user->id)
+            ->whereNull('group_id')
+            ->where('type', 'income')
+            ->whereBetween(DB::raw('COALESCE(transaction_date, created_at)'), [
+                $month->startOfMonth(),
+                $month->endOfMonth(),
+            ])
+            ->sum('amount');
+    }
+
+    if (count($monthlyIncomes) > 1 && max($monthlyIncomes) > 0) {
+        try {
+            $mean = array_sum($monthlyIncomes) / count($monthlyIncomes);
+            if ($mean > 0) {
+                $variance = array_sum(array_map(
+                    fn ($x) => pow($x - $mean, 2),
+                    $monthlyIncomes
+                )) / count($monthlyIncomes);
+                $cv = sqrt($variance) / $mean;
+                $stabilityScore = max(20 - ($cv * 10), 0);
+                $healthFactors['income_stability'] = min($stabilityScore, 20);
+            } else {
+                $healthFactors['income_stability'] = 10;
+            }
+        } catch (\Throwable $e) {
+            $healthFactors['income_stability'] = 10;
+        }
+    } else {
+        $healthFactors['income_stability'] = 10;
+    }
+
+    // Factor 4: Expense Control (0-15 points)
+    $expenseRatio = $overallIncome > 0 ? ($overallExpense / $overallIncome) * 100 : 100;
+    if ($expenseRatio <= 70) {
+        $healthFactors['expense_control'] = 15;
+    } elseif ($expenseRatio <= 85) {
+        $healthFactors['expense_control'] = 10;
+    } else {
+        $healthFactors['expense_control'] = max(0, 15 - (($expenseRatio - 85) / 5));
+    }
+
+    // Factor 5: Goal Progress (0-10 points)
+    if ($goalCount > 0) {
+        $goalsOnTrack = collect($activeGoals)->filter(function ($g) {
+            return !data_get($g, 'is_overdue', false) && data_get($g, 'progress', 0) > 0;
+        })->count();
+        $healthFactors['goal_progress'] = ($goalsOnTrack / $goalCount) * 10;
+    } else {
+        $healthFactors['goal_progress'] = 5;
+    }
+
+    $totalHealthScore = round(array_sum($healthFactors), 1);
+
+    $healthGrade = match (true) {
+        $totalHealthScore >= 90 => 'A',
+        $totalHealthScore >= 80 => 'B',
+        $totalHealthScore >= 70 => 'C',
+        $totalHealthScore >= 60 => 'D',
+        default => 'F',
+    };
+
+    $healthColor = match ($healthGrade) {
+        'A' => 'success',
+        'B' => 'info',
+        'C' => 'warning',
+        'D', 'F' => 'danger',
+    };
+
+    $financialHealth = [
+        'score' => $totalHealthScore,
+        'grade' => $healthGrade,
+        'color' => $healthColor,
+        'breakdown' => [
+            ['label' => 'Savings Rate', 'points' => $healthFactors['savings_rate'], 'max' => 30],
+            ['label' => 'Budget Adherence', 'points' => $healthFactors['budget_adherence'], 'max' => 25],
+            ['label' => 'Income Stability', 'points' => $healthFactors['income_stability'], 'max' => 20],
+            ['label' => 'Expense Control', 'points' => $healthFactors['expense_control'], 'max' => 15],
+            ['label' => 'Goal Progress', 'points' => $healthFactors['goal_progress'], 'max' => 10],
+        ],
+    ];
+
+    // ===== BUDGET WARNINGS =====
+    $budgetWarnings = $activeBudgets
+        ->filter(fn ($b) => data_get($b, 'progress', 0) >= 85)
+        ->values();
+
+    $totalsDisplay = [
+        'overall' => [
+            'income' => $formatCurrency((float) $overallIncome),
+            'expense' => $formatCurrency((float) $overallExpense),
+            'net' => $formatCurrency((float) $totalNet),
+            'net_class' => $totalNet >= 0 ? 'text-success' : 'text-danger',
+        ],
+        'month' => [
+            'income' => $formatCurrency((float) $monthlyIncome),
+            'expense' => $formatCurrency((float) $monthlyExpense),
+            'net' => $formatCurrency((float) $monthNet),
+            'net_class' => $monthNet >= 0 ? 'text-success' : 'text-danger',
+        ],
+    ];
+
+    return view('user.dashboard', [
+        'totals' => [
             'overall' => [
-                'income' => $formatCurrency((float) $overallIncome),
-                'expense' => $formatCurrency((float) $overallExpense),
-                'net' => $formatCurrency((float) $totalNet),
-                'net_class' => $totalNet >= 0 ? 'text-success' : 'text-danger',
+                'income' => $overallIncome,
+                'expense' => $overallExpense,
+                'net' => $totalNet,
             ],
             'month' => [
-                'income' => $formatCurrency((float) $monthlyIncome),
-                'expense' => $formatCurrency((float) $monthlyExpense),
-                'net' => $formatCurrency((float) $monthNet),
-                'net_class' => $monthNet >= 0 ? 'text-success' : 'text-danger',
+                'income' => $monthlyIncome,
+                'expense' => $monthlyExpense,
+                'net' => $monthNet,
             ],
-        ];
-
-        return view('user.dashboard', [
-            'totals' => [
-                'overall' => [
-                    'income' => $overallIncome,
-                    'expense' => $overallExpense,
-                    'net' => $totalNet,
-                ],
-                'month' => [
-                    'income' => $monthlyIncome,
-                    'expense' => $monthlyExpense,
-                    'net' => $monthNet,
-                ],
-            ],
-            'monthRangeLabel' => [
-                $startOfMonth->format('M d'),
-                $endOfMonth->format('M d'),
-            ],
-            'totalsDisplay' => $totalsDisplay,
-            'categoryCount' => $categoryCount,
-            'budgetCount' => $totalBudgets,
-            'recentTransactions' => $recentTransactions,
-            'activeBudgets' => $activeBudgets,
-            'chartData' => $chartData,
-            'filters' => $filters,
-            'chartWindowDescription' => $chartWindowDescription,
-            'chartEndMonthLabel' => $chartEndMonth->format('F Y'),
-            'insights' => $insights,
-            'topExpenseCategory' => $topExpenseCategory,
-            'overallExpenseRatio' => $overallExpenseRatio,
-            'notifications' => $recentNotifications,
-            'unreadCount' => $unreadCount,
-        ]);
-    }
+        ],
+        'monthRangeLabel' => [
+            $startOfMonth->format('M d'),
+            $endOfMonth->format('M d'),
+        ],
+        'totalsDisplay' => $totalsDisplay,
+        'categoryCount' => $categoryCount,
+        'budgetCount' => $totalBudgets,
+        'recentTransactions' => $recentTransactions,
+        'activeBudgets' => $activeBudgets,
+        'chartData' => $chartData,
+        'filters' => $filters,
+        'chartWindowDescription' => $chartWindowDescription,
+        'chartEndMonthLabel' => $chartEndMonth->format('F Y'),
+        'insights' => $insights,
+        'topExpenseCategory' => $topExpenseCategory,
+        'overallExpenseRatio' => $overallExpenseRatio,
+        'notifications' => $recentNotifications,
+        'unreadCount' => $unreadCount,
+        // New fields for enhanced dashboard
+        'activeGoals' => $activeGoals,
+        'goalCount' => $goalCount,
+        'financialHealth' => $financialHealth,
+        'budgetWarnings' => $budgetWarnings,
+    ]);
+}
 
     /**
      * Show user profile
@@ -1449,5 +1605,103 @@ class UserController extends Controller
         return view('user.notifications.index', [
             'notifications' => $notifications,
         ]);
+    }
+
+    public function goals(Request $request)
+{
+    $user = $request->user();
+    
+    $formatCurrency = static function (float $amount): string {
+        $sign = $amount < 0 ? '-$' : '$';
+        return $sign . number_format(abs($amount), 2);
+    };
+
+    $goals = Goal::where('user_id', $user->id)
+        ->orderByRaw("CASE WHEN status = 'active' THEN 0 WHEN status = 'paused' THEN 1 ELSE 2 END")
+        ->orderBy('target_date')
+        ->get()
+        ->map(function (Goal $goal) use ($formatCurrency) {
+            $progress = $goal->target_amount > 0
+                ? min(($goal->current_amount / $goal->target_amount) * 100, 100)
+                : 0;
+
+            return [
+                'id' => $goal->id,
+                'name' => $goal->name,
+                'description' => $goal->description,
+                'target_amount' => (float) $goal->target_amount,
+                'target_amount_formatted' => $formatCurrency((float) $goal->target_amount),
+                'current_amount' => (float) $goal->current_amount,
+                'current_amount_formatted' => $formatCurrency((float) $goal->current_amount),
+                'remaining' => max($goal->target_amount - $goal->current_amount, 0),
+                'remaining_formatted' => $formatCurrency((float) max($goal->target_amount - $goal->current_amount, 0)),
+                'progress' => round($progress, 1),
+                'target_date' => $goal->target_date->format('M d, Y'),
+                'target_date_raw' => $goal->target_date->format('Y-m-d'),
+                'days_remaining' => now()->diffInDays($goal->target_date, false),
+                'status' => $goal->status,
+                'is_overdue' => $goal->isOverdue(),
+            ];
+        });
+
+    return view('user.goals.index', [
+        'goals' => $goals,
+        'goalCount' => $goals->count(),
+    ]);
+}
+
+/**
+ * Store a new goal
+ */
+public function storeGoal(Request $request)
+{
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'description' => 'nullable|string|max:1000',
+        'target_amount' => 'required|numeric|min:0.01',
+        'target_date' => 'required|date|after:today',
+    ]);
+
+    $goal = Goal::create([
+        'user_id' => $request->user()->id,
+        ...$validated,
+        'status' => 'active',
+        'current_amount' => 0,
+    ]);
+
+    return redirect()->route('user.goals')->with('success', 'Goal created successfully!');
+}
+
+/**
+ * Update a goal
+ */
+public function updateGoal(Request $request, Goal $goal)
+{
+    $this->authorize('update', $goal);
+
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'description' => 'nullable|string|max:1000',
+        'target_amount' => 'required|numeric|min:0.01',
+        'current_amount' => 'nullable|numeric|min:0',
+        'target_date' => 'required|date',
+        'status' => 'required|in:active,paused,completed',
+    ]);
+
+    $goal->update($validated);
+
+    return redirect()->route('user.goals')->with('success', 'Goal updated successfully!');
+}
+
+/**
+ * Delete a goal
+ */
+    public function destroyGoal(Request $request, Goal $goal)
+    {
+        $this->authorize('delete', $goal);
+        
+        $goal->delete();
+
+        return redirect()->route('user.goals')->with('success', 'Goal deleted successfully!');
     }
 }
