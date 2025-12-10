@@ -1,10 +1,10 @@
-import 'package:equatable/equatable.dart';
+part of 'get_categories_bloc.dart';
 
 sealed class GetCategoriesEvent extends Equatable {
   const GetCategoriesEvent();
 
   @override
-  List<Object?> get props => [];
+  List<Object> get props => [];
 }
 
-final class GetCategories extends GetCategoriesEvent {}
+class GetCategories extends GetCategoriesEvent {}
