@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-// Firebase removed for now to avoid initialization errors during testing.
 import 'screens/login/login_screen.dart';
 import 'package:fintrack_frontend/services/api_service.dart';
 import 'screens/login/signup_screen.dart';
