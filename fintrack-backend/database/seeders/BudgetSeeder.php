@@ -22,31 +22,32 @@ class BudgetSeeder extends Seeder
                 continue; // don't create duplicates for users who already have budgets
             }
 
-            // Monthly groceries
-            Budget::create([
-                'user_id' => $user->id,
-                'category_id' => null,
-                'name' => 'Monthly Groceries',
-                'amount' => 500.00,
-                'period' => 'monthly',
-                'start_date' => Carbon::now()->startOfMonth()->toDateString(),
-                'end_date' => Carbon::now()->endOfMonth()->toDateString(),
-                'is_active' => true,
-                'alert_thresholds' => [50, 75, 90],
-            ]);
+        //     // Monthly groceries
+        //     Budget::create([
+        //         'user_id' => $user->id,
+        //         'category_id' => null,
+        //         'name' => 'Monthly Groceries',
+        //         'amount' => 500.00,
+        //         'period' => 'monthly',
+        //         'start_date' => Carbon::now()->startOfMonth()->toDateString(),
+        //         'end_date' => Carbon::now()->endOfMonth()->toDateString(),
+        //         'is_active' => true,
+        //         'alert_thresholds' => [50, 75, 90],
+        //     ]);
 
-            // Entertainment
-            Budget::create([
-                'user_id' => $user->id,
-                'category_id' => null,
-                'name' => 'Entertainment',
-                'amount' => 150.00,
-                'period' => 'monthly',
-                'start_date' => Carbon::now()->startOfMonth()->toDateString(),
-                'end_date' => Carbon::now()->endOfMonth()->toDateString(),
-                'is_active' => true,
-                'alert_thresholds' => [50, 85],
-            ]);
+        //     // Entertainment
+        //     Budget::create([
+        //         'user_id' => $user->id,
+        //         'category_id' => null,
+        //         'name' => 'Entertainment',
+        //         'amount' => 150.00,
+        //         'period' => 'monthly',
+        //         'start_date' => Carbon::now()->startOfMonth()->toDateString(),
+        //         'end_date' => Carbon::now()->endOfMonth()->toDateString(),
+        //         'is_active' => true,
+        //         'alert_thresholds' => [50, 85],
+        //     ]);
+        // }
         }
     }
 }

@@ -84,6 +84,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/users', [AdminController::class, 'users'])->name('users');
     Route::get('/transactions', [AdminController::class, 'transactions'])->name('transactions');
+    Route::get('/reports', [AdminController::class, 'reports'])->name('reports');
+    Route::get('/reports/export/csv', [AdminController::class, 'reportsExportCsv'])->name('reports.export.csv');
+    Route::get('/reports/export/pdf', [AdminController::class, 'reportsExportPdf'])->name('reports.export.pdf');
     Route::post('/impersonate/{user}', [AdminController::class, 'impersonate'])->name('impersonate');
 
     // Groups

@@ -262,7 +262,7 @@
                 <p class="mb-0 text-white-50">Monitor FinTrack performance, member engagement, and cash flow trends at a glance.</p>
             </div>
             <div class="d-flex flex-wrap gap-2">
-                <a href="{{ route('admin.transactions') }}" class="btn btn-light btn-lg px-4 shadow-sm">
+                <a href="{{ route('admin.reports') }}" class="btn btn-light btn-lg px-4 shadow-sm">
                     <i class="fas fa-chart-line me-2"></i>View Reports
                 </a>
                 <a href="{{ route('admin.groups.index') }}" class="btn btn-outline-light btn-lg px-4 shadow-sm">
@@ -287,6 +287,7 @@
                 <span class="d-inline-flex align-items-center"><i class="fas fa-wallet me-2"></i>Income last month ${{ number_format((float) $latestMonthlyIncome, 2) }}</span>
             @endif
         </div>
+        <span class="badge bg-info">All transactions (group + personal)</span>
     </div>
 </div>
 
