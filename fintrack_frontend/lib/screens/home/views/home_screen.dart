@@ -3,7 +3,6 @@ import 'dart:math';
 import 'package:expense_repository/expense_repository.dart';
 import '../../add_expense/blocs/create_categorybloc/create_category_bloc.dart';
 import '../../add_expense/blocs/get_categories_bloc/get_categories_bloc.dart';
-import '../../add_expense/blocs/get_categories_bloc/get_categories_event.dart';
 import '../../add_expense/views/add_expense.dart';
 import '../blocs/get_expenses_bloc/get_expenses_bloc.dart';
 import 'main_screen.dart';
