@@ -70,46 +70,114 @@
                     </a>
                 </div>
             </div>
-{{-- 
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Budget Status</h5>
-                </div>
-                <div class="card-body">
-                    @forelse($activeBudgets ?? [] as $budget)
-                        <div class="mb-4">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="fw-semibold">{{ data_get($budget, 'label', 'General') }}</span>
-                                <span class="small fw-semibold {{ data_get($budget, 'status_class') }}">{{ data_get($budget, 'status_label') }}</span>
-                            </div>
-                            <div class="d-flex justify-content-between text-muted small mb-2">
-                                <span>Spent {{ data_get($budget, 'spent_formatted', '$0.00') }}</span>
-                                <span>Limit {{ data_get($budget, 'limit_formatted', '$0.00') }}</span>
-                            </div>
-                            <div class="progress" style="height: 6px;">
-                                <div class="progress-bar" role="progressbar"
-                                     style="width: {{ data_get($budget, 'progress', 0) }}%"
-                                     aria-valuenow="{{ data_get($budget, 'progress', 0) }}"
-                                     aria-valuemin="0" aria-valuemax="100">
-                                </div>
-                            </div>
-                            <div class="d-flex justify-content-between text-muted small mt-2">
-                                <span>Remaining {{ data_get($budget, 'remaining_formatted', '$0.00') }}</span>
-                                <span>{{ data_get($budget, 'progress', 0) }}% used</span>
-                            </div>
-                        </div>
-                    @empty
-                        <p class="text-muted text-center mb-3">No active budgets yet.</p>
-                        <div class="d-flex justify-content-center">
-                            <a href="{{ route('user.budgets') }}" class="btn btn-outline-primary btn-sm">Create a budget</a>
-                        </div>
-                    @endforelse
-                </div>
-            </div> --}}
         </div>
         
     </div>
+<!-- FINANCIAL HEALTH SCORE & WARNINGS -->
+<div class="row g-4 mb-5">
+    <!-- Financial Health Score Card -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">Financial Health</h5>
+                <small class="text-muted">Overall assessment</small>
+            </div>
+            <div class="card-body d-flex flex-column align-items-center justify-content-center text-center py-4">
+                <div class="position-relative mb-3" style="width: 120px; height: 120px;">
+                    <svg viewBox="0 0 120 120" style="transform: rotate(-90deg);">
+                        <circle cx="60" cy="60" r="54" fill="none" stroke="#e5e7eb" stroke-width="8"/>
+                        <circle cx="60" cy="60" r="54" fill="none" stroke="#{{ data_get($financialHealth, 'color') === 'success' ? '16a34a' : (data_get($financialHealth, 'color') === 'danger' ? 'dc2626' : (data_get($financialHealth, 'color') === 'warning' ? 'ea580c' : '0ea5e9')) }}" 
+                                stroke-width="8" stroke-dasharray="{{ (data_get($financialHealth, 'score', 0) / 100) * 339.29 }} 339.29" stroke-linecap="round"/>
+                    </svg>
+                    <div class="position-absolute top-50 start-50 translate-middle text-center">
+                        <div class="display-4 fw-bold text-{{ data_get($financialHealth, 'color') }}">{{ data_get($financialHealth, 'grade', '—') }}</div>
+                        <small class="text-muted">{{ data_get($financialHealth, 'score', 0) }}/100</small>
+                    </div>
+                </div>
+                <p class="text-muted small mb-3">Based on savings rate, budgets, income stability, and goals</p>
+                <div class="w-100">
+                    @foreach(data_get($financialHealth, 'breakdown', []) as $factor)
+                        <div class="d-flex justify-content-between align-items-center small mb-2">
+                            <span class="text-muted">{{ data_get($factor, 'label') }}</span>
+                            <div class="progress flex-grow-1 mx-2" style="height: 6px; max-width: 80px;">
+                                <div class="progress-bar" style="width: {{ (data_get($factor, 'points', 0) / data_get($factor, 'max', 1)) * 100 }}%"></div>
+                            </div>
+                            <small class="fw-semibold" style="min-width: 50px; text-align: right;">{{ round(data_get($factor, 'points', 0), 1) }}/{{ data_get($factor, 'max', 0) }}</small>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <!-- Budget Warnings & Goals Summary -->
+    <div class="col-lg-8">
+        <!-- Budget Warnings -->
+        @if(!empty($budgetWarnings) && count($budgetWarnings) > 0)
+            <div class="card shadow-sm border-0 border-start border-warning mb-4">
+                <div class="card-header bg-warning bg-opacity-10 border-0">
+                    <h6 class="mb-0 text-warning"><i class="fas fa-exclamation-triangle me-2"></i>Budget Warnings</h6>
+                </div>
+                <div class="card-body">
+                    @foreach($budgetWarnings as $warning)
+                        <div class="d-flex justify-content-between align-items-center pb-2 mb-2 border-bottom">
+                            <div>
+                                <h6 class="mb-0">{{ data_get($warning, 'label', 'Budget') }}</h6>
+                                <small class="text-muted">{{ data_get($warning, 'progress', 0) }}% used</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-semibold text-warning">{{ data_get($warning, 'spent_formatted', '$0.00') }} / {{ data_get($warning, 'limit_formatted', '$0.00') }}</div>
+                                <small class="text-{{ data_get($warning, 'progress', 0) >= 100 ? 'danger' : 'warning' }}">{{ data_get($warning, 'status_label', 'Near limit') }}</small>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
+        <!-- Goals Summary -->
+        @if($goalCount > 0 && !empty($activeGoals))
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0">Financial Goals</h5>
+                        <small class="text-muted">{{ $goalCount }} active goal{{ $goalCount !== 1 ? 's' : '' }}</small>
+                    </div>
+                    <a href="{{ route('user.goals') ?? '#' }}" class="btn btn-sm btn-outline-primary">Manage</a>
+                </div>
+                <div class="card-body">
+                    @forelse($activeGoals as $goal)
+                        <div class="d-flex justify-content-between align-items-center pb-2 mb-2 border-bottom">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ data_get($goal, 'name', 'Goal') }}</h6>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar" style="width: {{ min(max(data_get($goal, 'progress', 0), 0), 100) }}%"></div>
+                                </div>
+                            </div>
+                            <div class="text-end ms-3">
+                                <div class="small {{ data_get($goal, 'status_class', 'text-warning') }} fw-semibold">{{ data_get($goal, 'progress', 0) }}%</div>
+                                <small class="text-muted">{{ data_get($goal, 'current_amount_formatted', '$0') }} / {{ data_get($goal, 'target_amount_formatted', '$0') }}</small>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="text-muted text-center mb-0">No active goals. <a href="{{ route('user.goals') ?? '#' }}" class="text-decoration-none">Create one</a></p>
+                    @endforelse
+                </div>
+            </div>
+        @else
+            <div class="card shadow-sm border-0 border-dashed">
+                <div class="card-body text-center py-4">
+                    <i class="fas fa-bullseye text-muted mb-3" style="font-size: 32px;"></i>
+                    <p class="text-muted mb-2">No financial goals set yet</p>
+                    <p class="text-muted small">Set goals to track progress toward your financial objectives</p>
+                    @if(Route::has('user.goals'))
+                        <a href="{{ route('user.goals') }}" class="btn btn-sm btn-primary mt-2">Create Goal</a>
+                    @endif
+                </div>
+            </div>
+        @endif
+    </div>
+</div>
     @if(!empty($insights ?? []) || !empty($topExpenseCategory ?? []))
         <div class="row g-4 mb-4 align-items-stretch">
             <div class="col-lg-8">

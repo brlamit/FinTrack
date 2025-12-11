@@ -35,9 +35,16 @@
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            @php $avatarUrl = auth()->user()->avatar; @endphp
-                            @if($avatarUrl)
-                                <img id="navbar-avatar-img" src="{{ $avatarUrl }}{{ strpos($avatarUrl, '?') === false ? '?' : '&' }}v={{ auth()->user()->updated_at?->timestamp ?? time() }}" alt="{{ auth()->user()->name }}" class="rounded-circle" width="36" height="36" style="object-fit:cover;">
+                            @if(auth()->user()->avatar)
+                                <img id="navbar-avatar-img" 
+                                     src="{{ auth()->user()->avatar }}?v={{ auth()->user()->updated_at?->timestamp ?? time() }}" 
+                                     alt="{{ auth()->user()->name }}" 
+                                     class="rounded-circle" 
+                                     width="36" height="36" 
+                                     style="object-fit:cover;"
+                                     crossorigin="anonymous"
+                                     referrerpolicy="no-referrer"
+                                     onerror="this.onerror=null; this.src='{{ asset('assets/uploads/images/default.png') }}';">
                             @else
                                 <i class="fas fa-user-shield"></i>
                             @endif
@@ -50,8 +57,18 @@
                                 </a>
                             </li>
                             <li>
-                                <a class="dropdown-item" href="{{ route('admin.users') }}">
-                                    <i class="fas fa-sliders-h me-2"></i>Settings
+                                <a class="dropdown-item" href="{{ route('admin.profile.edit') }}">
+                                    <i class="fas fa-edit me-2"></i>Edit Profile
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ route('admin.security') }}">
+                                    <i class="fas fa-lock me-2"></i>Security
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ route('admin.preferences') }}">
+                                    <i class="fas fa-cog me-2"></i>Preferences
                                 </a>
                             </li>
                             <li><hr class="dropdown-divider"></li>
