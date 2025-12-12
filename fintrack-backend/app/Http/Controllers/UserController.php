@@ -522,7 +522,7 @@ public function dashboard(Request $request)
         ],
     ];
 
-    return view('user.dashboard', [
+    $payload = [
         'totals' => [
             'overall' => [
                 'income' => $overallIncome,
@@ -558,7 +558,18 @@ public function dashboard(Request $request)
         'goalCount' => $goalCount,
         'financialHealth' => $financialHealth,
         'budgetWarnings' => $budgetWarnings,
-    ]);
+    ];
+
+    // If the client expects JSON (e.g. mobile app via API),
+    // return a structured dashboard payload instead of HTML.
+    if ($request->wantsJson()) {
+        return response()->json([
+            'success' => true,
+            'data' => $payload,
+        ]);
+    }
+
+    return view('user.dashboard', $payload);
 }
 
     /**

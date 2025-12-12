@@ -35,6 +35,7 @@ class TransactionController extends Controller
         }
 
         $query = Transaction::where('user_id', auth()->id())
+            ->whereNull('group_id')
             ->with(['category', 'receipt']);
 
         // Apply filters
@@ -306,22 +307,27 @@ class TransactionController extends Controller
         $startDate = $request->start_date ?? now()->startOfMonth()->toDateString();
         $endDate = $request->end_date ?? now()->endOfMonth()->toDateString();
 
+        // Keep statistics consistent with the user dashboard by excluding
+        // group-based transactions (those with a non-null group_id).
+        $baseQuery = Transaction::where('user_id', auth()->id())
+            ->whereNull('group_id');
+
         $stats = [
-            'total_income' => Transaction::where('user_id', auth()->id())
+            'total_income' => (clone $baseQuery)
                 ->income()
                 ->dateRange($startDate, $endDate)
                 ->sum('amount'),
 
-            'total_expenses' => Transaction::where('user_id', auth()->id())
+            'total_expenses' => (clone $baseQuery)
                 ->expense()
                 ->dateRange($startDate, $endDate)
                 ->sum('amount'),
 
-            'transaction_count' => Transaction::where('user_id', auth()->id())
+            'transaction_count' => (clone $baseQuery)
                 ->dateRange($startDate, $endDate)
                 ->count(),
 
-            'category_breakdown' => Transaction::where('user_id', auth()->id())
+            'category_breakdown' => (clone $baseQuery)
                 ->expense()
                 ->dateRange($startDate, $endDate)
                 ->with('category')

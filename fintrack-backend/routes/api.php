@@ -71,11 +71,19 @@ Route::prefix('auth')->group(function () {
 Route::middleware(['auth:sanctum'])->group(function () {
 
     // -------------------------------------------------------
+    // 📊 DASHBOARD
+    // -------------------------------------------------------
+    Route::get('dashboard', [UserController::class, 'dashboard']);
+
+    // -------------------------------------------------------
     // 🧑 USER PROFILE
     // -------------------------------------------------------
     Route::get('me', [AuthController::class, 'me']);
     Route::put('me', [AuthController::class, 'updateProfile']);
     Route::get('me/profile', [UserController::class, 'profile']);
+
+    // Dashboard summary (JSON), mirroring the web dashboard
+    Route::get('dashboard', [UserController::class, 'dashboard']);
 
     // 🔥 Added from web.php (settings & security)
     Route::get('security', [UserController::class, 'security']);
