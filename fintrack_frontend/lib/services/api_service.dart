@@ -58,15 +58,15 @@ class ApiService {
   static bool get isLoggedIn =>
       (token != null && token!.isNotEmpty) || currentUser != null;
 
-
   // Splash Screen
   static Future<bool> splash() async {
     // Just a placeholder for any startup logic if needed
-    
+
     await Future.delayed(const Duration(seconds: 2));
 
     return true;
   }
+
   // -------------------------
   // LOGIN
   // -------------------------
@@ -234,7 +234,7 @@ class ApiService {
     String splitType = 'custom',
   }) async {
     try {
-       final uri = Uri.parse('$backendBaseUrl/transaction/create');
+      final uri = Uri.parse('$backendBaseUrl/transaction/create');
       String? receiptPath;
 
       // Upload image (if exists)
@@ -368,11 +368,11 @@ class ApiService {
 
       Map<String, dynamic>? stats;
       if (statsResp.statusCode == 200 && statsResp.body.isNotEmpty) {
-        try {
-          stats = Map<String, dynamic>.from(jsonDecode(statsResp.body));
-        } catch (_) {}
+        final decoded = jsonDecode(statsResp.body);
+        if (decoded is Map && decoded['data'] != null) {
+          stats = Map<String, dynamic>.from(decoded['data']);
+        }
       }
-
       // Fetch insights
       final insightsResp = await http.get(
         Uri.parse('$backendBaseUrl/insights'),
@@ -380,9 +380,10 @@ class ApiService {
       );
       List<dynamic>? insights;
       if (insightsResp.statusCode == 200 && insightsResp.body.isNotEmpty) {
-        try {
-          insights = List<dynamic>.from(jsonDecode(insightsResp.body));
-        } catch (_) {}
+        final decoded = jsonDecode(insightsResp.body);
+        if (decoded is Map && decoded['data'] != null) {
+          insights = List<dynamic>.from(decoded['data']);
+        }
       }
 
       // Fetch recent transactions (server returns newest first)
@@ -392,13 +393,13 @@ class ApiService {
       );
       List<dynamic>? transactions;
       if (txResp.statusCode == 200 && txResp.body.isNotEmpty) {
-        try {
-          final decoded = jsonDecode(txResp.body);
-          if (decoded is List) {
-            transactions = decoded;
-          } else if (decoded is Map && decoded['data'] != null)
-            transactions = List<dynamic>.from(decoded['data']);
-        } catch (_) {}
+        final decoded = jsonDecode(txResp.body);
+        if (decoded is Map && decoded['data'] != null) {
+          final page = decoded['data'];
+          if (page is Map && page['data'] != null) {
+            transactions = List<dynamic>.from(page['data']);
+          }
+        }
       }
 
       // Fetch budgets
@@ -408,13 +409,10 @@ class ApiService {
       );
       List<dynamic>? budgets;
       if (budResp.statusCode == 200 && budResp.body.isNotEmpty) {
-        try {
-          final decoded = jsonDecode(budResp.body);
-          if (decoded is List) {
-            budgets = decoded;
-          } else if (decoded is Map && decoded['data'] != null)
-            budgets = List<dynamic>.from(decoded['data']);
-        } catch (_) {}
+        final decoded = jsonDecode(budResp.body);
+        if (decoded is Map && decoded['data'] != null) {
+          budgets = List<dynamic>.from(decoded['data']);
+        }
       }
 
       return {
@@ -425,6 +423,87 @@ class ApiService {
       };
     } catch (e) {
       throw Exception('Failed to fetch dashboard: $e');
+    }
+  }
+
+  // -------------------------
+  // CATEGORIES (from backend)
+  // -------------------------
+  static Future<List<dynamic>> fetchCategories({String? type}) async {
+    try {
+      final headers = <String, String>{'Content-Type': 'application/json'};
+      if (token != null && token!.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      Uri uri = Uri.parse('$backendBaseUrl/categories');
+      if (type != null && type.isNotEmpty) {
+        uri = uri.replace(queryParameters: {'type': type});
+      }
+
+      final resp = await http.get(uri, headers: headers);
+
+      if (resp.statusCode == 200 && resp.body.isNotEmpty) {
+        final decoded = jsonDecode(resp.body);
+        if (decoded is Map && decoded['data'] != null) {
+          return List<dynamic>.from(decoded['data']);
+        }
+      }
+
+      final err = resp.body.isNotEmpty ? resp.body : 'Fetch categories failed';
+      throw Exception(
+        'Fetch categories failed: HTTP ${resp.statusCode} - $err',
+      );
+    } catch (e) {
+      throw Exception('Fetch categories failed: $e');
+    }
+  }
+
+  // -------------------------
+  // CREATE TRANSACTION (backend)
+  // -------------------------
+  static Future<bool> createTransaction({
+    required int categoryId,
+    required double amount,
+    required String type,
+    required DateTime transactionDate,
+    String? description,
+  }) async {
+    try {
+      final headers = <String, String>{'Content-Type': 'application/json'};
+      if (token != null && token!.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final body = <String, dynamic>{
+        'category_id': categoryId,
+        'amount': amount,
+        'transaction_date': transactionDate.toIso8601String().split('T').first,
+        'type': type,
+      };
+
+      if (description != null && description.isNotEmpty) {
+        body['description'] = description;
+      }
+
+      final resp = await http.post(
+        Uri.parse('$backendBaseUrl/transactions'),
+        headers: headers,
+        body: jsonEncode(body),
+      );
+
+      if (resp.statusCode == 201 || resp.statusCode == 200) {
+        return true;
+      }
+
+      final err = resp.body.isNotEmpty
+          ? resp.body
+          : 'Create transaction failed';
+      throw Exception(
+        'Create transaction failed: HTTP ${resp.statusCode} - $err',
+      );
+    } catch (e) {
+      throw Exception('Create transaction failed: $e');
     }
   }
 

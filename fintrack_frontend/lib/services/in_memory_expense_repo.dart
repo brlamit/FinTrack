@@ -6,6 +6,7 @@ class InMemoryExpenseRepo implements ExpenseRepository {
 
   @override
   Future<void> createCategory(Category category) async {
+    // Remove existing category with same ID
     _categories.removeWhere((c) => c.categoryId == category.categoryId);
     _categories.add(category);
   }
@@ -18,16 +19,17 @@ class InMemoryExpenseRepo implements ExpenseRepository {
 
   @override
   Future<void> createExpense(Expense expense) async {
+    // Remove existing expense with same ID
     _expenses.removeWhere((e) => e.expenseId == expense.expenseId);
     _expenses.add(expense);
 
-    // Update category totalExpenses if category matches
+    // Update category's totalExpenses
     final idx = _categories.indexWhere(
       (c) => c.categoryId == expense.category.categoryId,
     );
     if (idx >= 0) {
       final cat = _categories[idx];
-      cat.totalExpenses = (cat.totalExpenses) + expense.amount;
+      cat.totalExpenses = (cat.totalExpenses ?? 0) + expense.amount;
     }
   }
 
