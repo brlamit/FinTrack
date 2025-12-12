@@ -1,72 +1,95 @@
-import 'dart:async';
-
-import 'package:expense_repository/expense_repository.dart';
-import 'package:fintrack_frontend/screens/home/views/home_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fintrack_frontend/screens/login/login_screen.dart';
 
-import 'home/blocs/get_expenses_bloc/get_expenses_bloc.dart';
-
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-    Timer(
-      const Duration(seconds: 3),
-      () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => BlocProvider(
-              create: (context) => GetExpensesBloc(
-                SupabaseExpenseRepo(),
-              )..add(GetExpenses()),
-              child: const HomeScreen(),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final height = MediaQuery.sizeOf(context).height * 1;
-    // final width = MediaQuery.sizeOf(context).width * 1;
+    final height = MediaQuery.of(context).size.height;
+
     return Scaffold(
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Center(
-            child: Image.asset(
-              'assets/logo.png',
-              fit: BoxFit.cover,
-              height: height * .4,
+      backgroundColor: Colors.white,
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Title
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  "Let Us help you",
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Text(
+                  "😊",
+                  style: TextStyle(fontSize: 24),
+                )
+              ],
             ),
-          ),
-          SizedBox(
-            height: height * 0.01,
-          ),
-          Center(
-            child: Text(
-              'Expense Tracker',
+
+            const SizedBox(height: 8),
+
+            // Subtitle
+            const Text(
+              "To track your daily, weekly and monthly expenses.",
+              textAlign: TextAlign.center,
               style: TextStyle(
-                letterSpacing: .6,
-                color: Theme.of(context).colorScheme.primary,
-                fontWeight: FontWeight.bold,
-                fontSize: 22,
+                color: Colors.black54,
+                fontSize: 14,
+                height: 1.4,
               ),
             ),
-          ),
-        ],
+
+            SizedBox(height: height * 0.15),
+
+            // Let's Start Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const LoginScreen(),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  backgroundColor: Colors.blue,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Let’s start!",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Icon(Icons.arrow_right_alt, color: Colors.white, size: 22),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

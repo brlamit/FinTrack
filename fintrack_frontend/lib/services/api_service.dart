@@ -58,6 +58,15 @@ class ApiService {
   static bool get isLoggedIn =>
       (token != null && token!.isNotEmpty) || currentUser != null;
 
+
+  // Splash Screen
+  static Future<bool> splash() async {
+    // Just a placeholder for any startup logic if needed
+    
+    await Future.delayed(const Duration(seconds: 2));
+
+    return true;
+  }
   // -------------------------
   // LOGIN
   // -------------------------
@@ -225,6 +234,7 @@ class ApiService {
     String splitType = 'custom',
   }) async {
     try {
+       final uri = Uri.parse('$backendBaseUrl/transaction/create');
       String? receiptPath;
 
       // Upload image (if exists)
