@@ -1,22 +1,17 @@
 import 'dart:math';
+import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
-import 'package:expense_repository/expense_repository.dart';
-import '../../add_expense/blocs/create_categorybloc/create_category_bloc.dart';
-import '../../add_expense/blocs/get_categories_bloc/get_categories_bloc.dart';
-import '../../add_expense/views/add_expense.dart';
-import '../blocs/get_expenses_bloc/get_expenses_bloc.dart';
 import 'main_screen.dart';
 import '../../stats/stats.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-
-import '../../add_expense/blocs/create_expense_bloc/create_expense_bloc.dart';
+import '../../../services/api_service.dart';
+import '../../add_expense/views/add_transaction_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  final String? userName;
+  final Map<String, dynamic> user;
+  final Map<String, dynamic> dashboard;
 
-  const HomeScreen({super.key, this.userName});
+  const HomeScreen({super.key, required this.user, required this.dashboard});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -24,109 +19,102 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int index = 0;
-  late Color selectedItem = Colors.blue;
-  Color unselectedItem = Colors.grey;
+  final Color selectedItem = Colors.blue;
+  final Color unselectedItem = Colors.grey;
+  late Map<String, dynamic> _dashboard;
+
+  @override
+  void initState() {
+    super.initState();
+    _dashboard = widget.dashboard;
+  }
+
+  Future<void> _openAddTransaction() async {
+    final created = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const AddTransactionScreen()),
+    );
+
+    if (created == true) {
+      try {
+        final refreshed = await ApiService.fetchDashboard();
+        if (!mounted) return;
+        setState(() {
+          _dashboard = refreshed;
+        });
+      } catch (_) {
+        // You might want to show a snackbar in a later refinement.
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<GetExpensesBloc, GetExpensesState>(
-        builder: (context, state) {
-      if (state is GetExpensesSuccess) {
-        return Scaffold(
-          backgroundColor: Colors.grey[100],
-          // appBar: AppBar(),
-          // bottomNavBar
-          bottomNavigationBar: ClipRRect(
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(30),
-            ),
-            child: BottomNavigationBar(
-                onTap: (value) {
-                  setState(() {
-                    index = value;
-                  });
-                  // print(value);
-                },
-                // backgroundColor: Colors.white,
-                showSelectedLabels: false,
-                showUnselectedLabels: false,
-                elevation: 3,
-                items: [
-                  BottomNavigationBarItem(
-                    icon: Icon(
-                      CupertinoIcons.home,
-                      color: index == 0 ? selectedItem : unselectedItem,
-                    ),
-                    label: "Home",
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(
-                      CupertinoIcons.graph_square_fill,
-                      color: index == 1 ? selectedItem : unselectedItem,
-                    ),
-                    label: "Stats",
-                  ),
-                ]),
-          ),
-          floatingActionButtonLocation:
-              FloatingActionButtonLocation.centerDocked,
-          floatingActionButton: FloatingActionButton(
-            shape: const CircleBorder(),
-            onPressed: () async {
-              var newExpense = await Navigator.push(
-                context,
-                MaterialPageRoute<Expense>(
-                  builder: (context) => MultiBlocProvider(
-                    providers: [
-                      BlocProvider(
-                        create: (context) =>
-                            CreateCategoryBloc(SupabaseExpenseRepo()),
-                      ),
-                      BlocProvider(
-                        create: (context) =>
-                            CreateExpenseBloc(SupabaseExpenseRepo()),
-                      ),
-                      BlocProvider(
-                        create: (context) =>
-                            GetCategoriesBloc(SupabaseExpenseRepo())
-                              ..add(GetCategories()),
-                      ),
-                    ],
-                    child: const AddExpense(),
-                  ),
-                ),
-              );
-              if (newExpense != null) {
-                setState(() {
-                  state.expenses.insert(0, newExpense);
-                });
-              }
-            },
-            child: Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [
-                    Theme.of(context).colorScheme.tertiary,
-                    Theme.of(context).colorScheme.secondary,
-                    Theme.of(context).colorScheme.primary,
-                  ],
-                  transform: const GradientRotation(pi / 4),
-                ),
+    return Scaffold(
+      backgroundColor: Colors.grey[100],
+
+      // Bottom navigation bar
+      bottomNavigationBar: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+        child: BottomNavigationBar(
+          currentIndex: index,
+          onTap: (value) => setState(() => index = value),
+          showSelectedLabels: false,
+          showUnselectedLabels: false,
+          items: [
+            BottomNavigationBarItem(
+              icon: Icon(
+                CupertinoIcons.home,
+                color: index == 0 ? selectedItem : unselectedItem,
               ),
-              child: const Icon(CupertinoIcons.add),
+              label: "Home",
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(
+                CupertinoIcons.graph_square_fill,
+                color: index == 1 ? selectedItem : unselectedItem,
+              ),
+              label: "Stats",
+            ),
+          ],
+        ),
+      ),
+
+      // Floating action button (optional, you can remove if not needed)
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: FloatingActionButton(
+        shape: const CircleBorder(),
+        onPressed: _openAddTransaction,
+        child: Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: [
+                Theme.of(context).colorScheme.tertiary ??
+                    Theme.of(context).colorScheme.primary,
+                Theme.of(context).colorScheme.secondary,
+                Theme.of(context).colorScheme.primary,
+              ],
+              transform: const GradientRotation(pi / 4),
             ),
           ),
-          body: index == 0 ? MainScreen(userName: widget.userName ?? 'User', totalsDisplay: {}, financialHealth: {}, recentTransactions: [], chartData: {},) : const StatScreen(),
-        );
-      } else {
-        return const Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(),
-          ),
-        );
-      }
-    });
+          child: const Icon(CupertinoIcons.add),
+        ),
+      ),
+
+      // Body
+      body: index == 0
+          ? MainScreen(
+              userName: widget.user['name'],
+              statistics: _dashboard['statistics'],
+              budgets: _dashboard['budgets'],
+              insights: _dashboard['insights'],
+              transactions: _dashboard['transactions'],
+              onAddTransaction: _openAddTransaction,
+            )
+          : const StatScreen(),
+    );
   }
 }
