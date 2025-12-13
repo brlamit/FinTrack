@@ -12,6 +12,17 @@ class ApiService {
 
   static SupabaseClient get _supabase => Supabase.instance.client;
 
+  // Helper: safely convert dynamic backend values (num/string) to double
+  static double _parseDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) {
+      // Remove currency symbols and grouping chars if present
+      final cleaned = value.replaceAll(RegExp(r'[^0-9.\-]'), '');
+      return double.tryParse(cleaned) ?? 0.0;
+    }
+    return 0.0;
+  }
+
   // Optional override for backend base (useful for testing on physical devices)
   // Example: ApiService.debugBackendOverride = 'http://192.168.1.42:8000/api';
   static String? debugBackendOverride;
@@ -355,71 +366,65 @@ class ApiService {
   // -------------------------
   static Future<Map<String, dynamic>> fetchDashboard() async {
     try {
-      final headers = <String, String>{'Content-Type': 'application/json'};
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
       if (token != null && token!.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
       }
-
-      // Fetch statistics/totals
-      final statsResp = await http.get(
-        Uri.parse('$backendBaseUrl/transactions/statistics'),
+      // Call unified dashboard endpoint which mirrors the web dashboard
+      final resp = await http.get(
+        Uri.parse('$backendBaseUrl/dashboard'),
         headers: headers,
       );
 
+      if (resp.statusCode != 200 || resp.body.isEmpty) {
+        final err = resp.body.isNotEmpty ? resp.body : 'Dashboard fetch failed';
+        throw Exception(
+          'Dashboard fetch failed: HTTP ${resp.statusCode} - $err',
+        );
+      }
+
+      final decoded = jsonDecode(resp.body);
+      final data = (decoded is Map && decoded['data'] is Map)
+          ? Map<String, dynamic>.from(decoded['data'])
+          : (decoded is Map<String, dynamic> ? decoded : <String, dynamic>{});
+
+      // Map web dashboard structure to mobile-friendly fields
       Map<String, dynamic>? stats;
-      if (statsResp.statusCode == 200 && statsResp.body.isNotEmpty) {
-        final decoded = jsonDecode(statsResp.body);
-        if (decoded is Map && decoded['data'] != null) {
-          stats = Map<String, dynamic>.from(decoded['data']);
-        }
-      }
-      // Fetch insights
-      final insightsResp = await http.get(
-        Uri.parse('$backendBaseUrl/insights'),
-        headers: headers,
-      );
-      List<dynamic>? insights;
-      if (insightsResp.statusCode == 200 && insightsResp.body.isNotEmpty) {
-        final decoded = jsonDecode(insightsResp.body);
-        if (decoded is Map && decoded['data'] != null) {
-          insights = List<dynamic>.from(decoded['data']);
+      final totals = data['totals'];
+      if (totals is Map) {
+        final overall = totals['overall'];
+        if (overall is Map) {
+          stats = {
+            'total_income': _parseDouble(overall['income']),
+            'total_expenses': _parseDouble(overall['expense']),
+            'net_income': _parseDouble(overall['net']),
+          };
         }
       }
 
-      // Fetch recent transactions (server returns newest first)
-      final txResp = await http.get(
-        Uri.parse('$backendBaseUrl/transactions'),
-        headers: headers,
-      );
-      List<dynamic>? transactions;
-      if (txResp.statusCode == 200 && txResp.body.isNotEmpty) {
-        final decoded = jsonDecode(txResp.body);
-        if (decoded is Map && decoded['data'] != null) {
-          final page = decoded['data'];
-          if (page is Map && page['data'] != null) {
-            transactions = List<dynamic>.from(page['data']);
-          }
-        }
-      }
+      final insights = data['insights'] is List
+          ? List<dynamic>.from(data['insights'] as List)
+          : null;
 
-      // Fetch budgets
-      final budResp = await http.get(
-        Uri.parse('$backendBaseUrl/budgets'),
-        headers: headers,
-      );
-      List<dynamic>? budgets;
-      if (budResp.statusCode == 200 && budResp.body.isNotEmpty) {
-        final decoded = jsonDecode(budResp.body);
-        if (decoded is Map && decoded['data'] != null) {
-          budgets = List<dynamic>.from(decoded['data']);
-        }
-      }
+      // Use the same recentTransactions list that the web dashboard shows
+      final transactions = data['recentTransactions'] is List
+          ? List<dynamic>.from(data['recentTransactions'] as List)
+          : null;
+
+      // Use activeBudgets from dashboard so status/progress match web UI
+      final budgets = data['activeBudgets'] is List
+          ? List<dynamic>.from(data['activeBudgets'] as List)
+          : null;
 
       return {
         'statistics': stats,
         'insights': insights,
         'transactions': transactions,
         'budgets': budgets,
+        'raw': data,
       };
     } catch (e) {
       throw Exception('Failed to fetch dashboard: $e');

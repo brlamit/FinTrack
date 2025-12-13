@@ -15,35 +15,46 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _loading = false;
   String? _error;
 
-  Future<void> _login() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
-    try {
-      final success = await ApiService.login(
-        _emailCtrl.text.trim(),
-        _passwordCtrl.text,
-      );
-
-      if (success) {
-        final userName = ApiService.currentUser?['name'] ?? 'User';
-
-        Navigator.pushReplacementNamed(
-          context,
-          '/home',
-          arguments: userName,
-        );
-
-      }
-    } catch (e) {
-      setState(() => _error = e.toString());
-    }
-
-    setState(() => _loading = false);
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    super.dispose();
   }
 
+ Future<void> _login() async {
+  setState(() {
+    _loading = true;
+    _error = null;
+  });
+
+  try {
+    final success = await ApiService.login(
+      _emailCtrl.text.trim(),
+      _passwordCtrl.text,
+    );
+
+    if (success) {
+      final user = ApiService.currentUser ?? {};
+      final dashboard = await ApiService.fetchDashboard();
+
+      Navigator.pushReplacementNamed(
+        context,
+        '/home',
+        arguments: {
+          'user': user,
+          'dashboard': dashboard,
+        },
+      );
+    } else {
+      setState(() => _error = "Invalid email or password");
+    }
+  } catch (e) {
+    setState(() => _error = "Login failed: ${e.toString()}");
+  }
+
+  setState(() => _loading = false);
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -75,20 +86,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: Colors.blue,
                   ),
                 ),
-
                 const SizedBox(height: 20),
-
                 TextField(
                   controller: _emailCtrl,
                   decoration: const InputDecoration(
-                    labelText: "Email ",
+                    labelText: "Email",
                     prefixIcon: Icon(Icons.person),
                     border: OutlineInputBorder(),
                   ),
                 ),
-
                 const SizedBox(height: 16),
-
                 TextField(
                   controller: _passwordCtrl,
                   obscureText: true,
@@ -98,14 +105,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     border: OutlineInputBorder(),
                   ),
                 ),
-
                 const SizedBox(height: 10),
-
                 if (_error != null)
-                  Text(_error!, style: const TextStyle(color: Colors.red)),
-
+                  Text(
+                    _error!,
+                    style: const TextStyle(color: Colors.red),
+                  ),
                 const SizedBox(height: 20),
-
                 ElevatedButton(
                   onPressed: _loading ? null : _login,
                   style: ElevatedButton.styleFrom(
@@ -119,16 +125,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text("Login"),
                 ),
-
                 const SizedBox(height: 12),
-
                 TextButton(
                   onPressed: () {
                     Navigator.pushReplacementNamed(context, '/register');
                   },
                   child: const Text("Don't have an account? Register"),
                 ),
-
                 TextButton(
                   onPressed: () {
                     Navigator.pushNamed(context, '/forgot-password');

@@ -40,7 +40,15 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
       final ok = await ApiService.verifyOtp(widget.email, code);
       if (ok) {
         if (widget.redirectHome) {
-          Navigator.pushReplacementNamed(context, '/home');
+          final user = ApiService.currentUser ?? {};
+          final dashboard = await ApiService.fetchDashboard();
+
+          // ignore: use_build_context_synchronously
+          Navigator.pushReplacementNamed(
+            context,
+            '/home',
+            arguments: {'user': user, 'dashboard': dashboard},
+          );
         } else {
           Navigator.pop(context, true);
         }
