@@ -34,13 +34,13 @@ Future getCategoryCreation(BuildContext context) {
             builder: (ctx, setState) {
               return BlocListener<CreateCategoryBloc, CreateCategoryState>(
                 listener: (context, state) {
-                  if (state is CreateCategorySucess) {
-                    Navigator.pop(ctx, category);
-                  } else if (state is CreateCategoryLoading) {
-                    setState(() {
-                      isLoading = true;
-                    });
-                  }
+                  // if (state is CreateCategorySucess) {
+                  //   Navigator.pop(ctx, category);
+                  // } else if (state is CreateCategoryLoading) {
+                  //   setState(() {
+                  //     isLoading = true;
+                  //   });
+                  // }
                 },
                 child: AlertDialog(
                   backgroundColor: const Color.fromARGB(255, 198, 208, 255),

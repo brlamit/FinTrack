@@ -126,39 +126,30 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     final dateLabel = DateFormat('dd/MM/yyyy').format(_selectedDate);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Add Transaction'),
-      ),
+      appBar: AppBar(title: const Text('Add Transaction')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (_error != null) ...[
-              Text(
-                _error!,
-                style: const TextStyle(color: Colors.red),
-              ),
+              Text(_error!, style: const TextStyle(color: Colors.red)),
               const SizedBox(height: 8),
             ],
-            const Text(
-              'Amount',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
+            const Text('Amount', style: TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             TextField(
               controller: _amountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
                 hintText: 'Enter amount',
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Type',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
+            const Text('Type', style: TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -213,22 +204,15 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     _selectedCategory = val;
                   });
                 },
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                ),
+                decoration: const InputDecoration(border: OutlineInputBorder()),
               ),
             const SizedBox(height: 16),
-            const Text(
-              'Date',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
+            const Text('Date', style: TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             InkWell(
               onTap: _pickDate,
               child: InputDecorator(
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                ),
+                decoration: const InputDecoration(border: OutlineInputBorder()),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [

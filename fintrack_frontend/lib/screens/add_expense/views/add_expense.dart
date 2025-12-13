@@ -61,11 +61,11 @@ class _AddExpenseState extends State<AddExpense> {
                       const Text(
                         "Add Expenses",
                         style: TextStyle(
-                            fontSize: 22, fontWeight: FontWeight.w500),
+                          fontSize: 22,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                      const SizedBox(
-                        height: 16,
-                      ),
+                      const SizedBox(height: 16),
                       SizedBox(
                         width: MediaQuery.of(context).size.width * 0.7,
                         child: TextFormField(
@@ -87,9 +87,7 @@ class _AddExpenseState extends State<AddExpense> {
                           ),
                         ),
                       ),
-                      const SizedBox(
-                        height: 32,
-                      ),
+                      const SizedBox(height: 32),
                       TextFormField(
                         controller: categoryController,
                         textAlignVertical: TextAlignVertical.center,
@@ -111,18 +109,20 @@ class _AddExpenseState extends State<AddExpense> {
                                   scale: 2,
                                 ),
                           suffixIcon: IconButton(
-                              onPressed: () async {
-                                var newCategory =
-                                    await getCategoryCreation(context);
-                                setState(() {
-                                  state.categories.insert(0, newCategory);
-                                });
-                              },
-                              icon: const Icon(
-                                FontAwesomeIcons.plus,
-                                size: 16,
-                                color: Colors.grey,
-                              )),
+                            onPressed: () async {
+                              var newCategory = await getCategoryCreation(
+                                context,
+                              );
+                              setState(() {
+                                state.categories.insert(0, newCategory);
+                              });
+                            },
+                            icon: const Icon(
+                              FontAwesomeIcons.plus,
+                              size: 16,
+                              color: Colors.grey,
+                            ),
+                          ),
                           hintText: 'Category',
                           border: const OutlineInputBorder(
                             borderRadius: BorderRadius.vertical(
@@ -142,53 +142,54 @@ class _AddExpenseState extends State<AddExpense> {
                           ),
                         ),
                         child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: ListView.builder(
-                                itemCount: state.categories.length,
-                                itemBuilder: (context, int i) {
-                                  return Card(
-                                    child: ListTile(
-                                      onTap: () {
-                                        setState(() {
-                                          expense.category =
-                                              state.categories[i];
-                                          categoryController.text =
-                                              expense.category.name;
-                                        });
-                                      },
-                                      leading: Image.asset(
-                                        'assets/${state.categories[i].icon}.png',
-                                        scale: 2,
-                                      ),
-                                      title: Text(state.categories[i].name),
-                                      tileColor:
-                                          Color(state.categories[i].color),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                  );
-                                })),
+                          padding: const EdgeInsets.all(8.0),
+                          child: ListView.builder(
+                            itemCount: state.categories.length,
+                            itemBuilder: (context, int i) {
+                              return Card(
+                                child: ListTile(
+                                  onTap: () {
+                                    setState(() {
+                                      expense.category = state.categories[i];
+                                      categoryController.text =
+                                          expense.category.name;
+                                    });
+                                  },
+                                  leading: Image.asset(
+                                    'assets/${state.categories[i].icon}.png',
+                                    scale: 2,
+                                  ),
+                                  title: Text(state.categories[i].name),
+                                  tileColor: Color(state.categories[i].color),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
                       ),
-                      const SizedBox(
-                        height: 16,
-                      ),
+                      const SizedBox(height: 16),
                       TextFormField(
                         controller: dateController,
                         textAlignVertical: TextAlignVertical.center,
                         readOnly: true,
                         onTap: () async {
                           DateTime? newDate = await showDatePicker(
-                              context: context,
-                              initialDate: expense.date,
-                              firstDate: DateTime.now(),
-                              lastDate: DateTime.now()
-                                  .add(const Duration(days: 365)));
+                            context: context,
+                            initialDate: expense.date,
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime.now().add(
+                              const Duration(days: 365),
+                            ),
+                          );
 
                           if (newDate != null) {
                             setState(() {
-                              dateController.text =
-                                  DateFormat('dd/MM/yyyy').format(newDate);
+                              dateController.text = DateFormat(
+                                'dd/MM/yyyy',
+                              ).format(newDate);
                               // selectDate = newDate;
                               expense.date = newDate;
                             });
@@ -204,13 +205,12 @@ class _AddExpenseState extends State<AddExpense> {
                           ),
                           hintText: 'Date',
                           border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none),
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
                         ),
                       ),
-                      const SizedBox(
-                        height: 32,
-                      ),
+                      const SizedBox(height: 32),
                       SizedBox(
                         width: double.infinity,
                         height: kToolbarHeight,
@@ -219,13 +219,14 @@ class _AddExpenseState extends State<AddExpense> {
                             : TextButton(
                                 onPressed: () {
                                   setState(() {
-                                    expense.amount =
-                                        int.parse(expenseController.text);
+                                    expense.amount = int.parse(
+                                      expenseController.text,
+                                    );
                                   });
 
-                                  context
-                                      .read<CreateExpenseBloc>()
-                                      .add(CreateExpense(expense));
+                                  context.read<CreateExpenseBloc>().add(
+                                    CreateExpense(expense),
+                                  );
                                 },
                                 style: TextButton.styleFrom(
                                   backgroundColor: Colors.black,
@@ -239,15 +240,14 @@ class _AddExpenseState extends State<AddExpense> {
                                     fontSize: 22,
                                     color: Colors.white,
                                   ),
-                                )),
-                      )
+                                ),
+                              ),
+                      ),
                     ],
                   ),
                 );
               } else {
-                return const Center(
-                  child: CircularProgressIndicator(),
-                );
+                return const Center(child: CircularProgressIndicator());
               }
             },
           ),
