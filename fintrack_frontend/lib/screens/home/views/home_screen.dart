@@ -118,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: const Icon(CupertinoIcons.add),
             ),
           ),
-          body: index == 0 ? MainScreen(state.expenses, userName: widget.userName ?? 'User') : const StatScreen(),
+          body: index == 0 ? MainScreen(userName: widget.userName ?? 'User', totalsDisplay: {}, financialHealth: {}, recentTransactions: [], chartData: {},) : const StatScreen(),
         );
       } else {
         return const Scaffold(

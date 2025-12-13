@@ -55,7 +55,9 @@ class MyApp extends StatelessWidget {
           return BlocProvider(
             create: (_) =>
                 GetExpensesBloc(InMemoryExpenseRepo())..add(GetExpenses()),
-            child: HomeScreen(userName: userName),
+            child: HomeScreen(
+              userName: userName ?? 'Guest'
+            ),
           );
         },
 

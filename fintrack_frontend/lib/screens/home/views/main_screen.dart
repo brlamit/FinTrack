@@ -1,341 +1,214 @@
-import 'dart:math';
-
-import 'package:expense_repository/expense_repository.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:intl/intl.dart';
+import 'package:syncfusion_flutter_charts/charts.dart';
 
 class MainScreen extends StatelessWidget {
-  final List<Expense> expenses;
-  final String? userName;
-  const MainScreen(this.expenses, {super.key, required this.userName});
+  final String userName;
+  final Map<String, dynamic> totalsDisplay;
+  final Map<String, dynamic> financialHealth;
+  final List<Map<String, dynamic>> recentTransactions;
+  final Map<String, dynamic> chartData; // includes monthly and category data
 
-  // to show total expenses balance
-  double _calculateTotalExpenses(List<Expense> expenses) {
-    double total = 0;
-    for (var expense in expenses) {
-      total += expense.amount;
-    }
-    return total;
-  }
+  const MainScreen({
+    super.key,
+    required this.userName,
+    required this.totalsDisplay,
+    required this.financialHealth,
+    required this.recentTransactions,
+    required this.chartData,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final totalExpenses = _calculateTotalExpenses(expenses);
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 10.0),
-        child: Column(
-          children: [
-            // welcome bar
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Container(
-                          height: 50,
-                          width: 50,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.yellow[700],
-                          ),
-                        ),
-                        const Icon(CupertinoIcons.person_alt),
-                      ],
-                    ),
-                    const SizedBox(width: 8),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Welcome",
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.outline,
-                          ),
-                        ),
-                        Text(
-                          "Hello, ${userName ?? 'User'}!",
+    final monthly = chartData['monthly'] ?? {'labels': [], 'income': [], 'expense': []};
+    final category = chartData['category'] ?? {'labels': [], 'values': [], 'colors': []};
 
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(CupertinoIcons.settings),
-                ),
-              ],
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Welcome, $userName! 👋'),
+        backgroundColor: Colors.blue,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Here's your financial overview",
+              style: TextStyle(color: Colors.grey[600]),
             ),
-            const SizedBox(height: 20.0),
-            // card
-            Container(
-              width: MediaQuery.of(context).size.width,
-              height: MediaQuery.of(context).size.width / 2,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Theme.of(context).colorScheme.primary,
-                    Theme.of(context).colorScheme.secondary,
-                    Theme.of(context).colorScheme.tertiary,
-                  ],
-                  transform: const GradientRotation(pi / 4),
-                ),
-                borderRadius: BorderRadius.circular(25),
-                boxShadow: [
-                  BoxShadow(
-                    blurRadius: 4,
-                    color: Colors.grey.shade300,
-                    offset: const Offset(5, 5),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    "Total Balacnce",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '\$${totalExpenses.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 40,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 12,
-                      horizontal: 20,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        //income row
-                        Row(
-                          children: [
-                            Container(
-                              width: 25,
-                              height: 25,
-                              decoration: const BoxDecoration(
-                                color: Colors.white30,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Center(
-                                child: Icon(
-                                  CupertinoIcons.arrow_up,
-                                  size: 12,
-                                  color: Colors.greenAccent,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            const Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Income",
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                Text(
-                                  '\$ 2,500.00',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w400,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        //expense row
-                        Row(
-                          children: [
-                            Container(
-                              width: 25,
-                              height: 25,
-                              decoration: const BoxDecoration(
-                                color: Colors.white30,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Center(
-                                child: Icon(
-                                  CupertinoIcons.arrow_down,
-                                  size: 12,
-                                  color: Colors.red,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            const Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Expense",
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                Text(
-                                  '\$ 8,000.00',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w400,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Transiction row
-            const SizedBox(height: 40),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "Transactions",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () {},
-                  child: Text(
-                    "View All",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Theme.of(context).colorScheme.outline,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+
             const SizedBox(height: 20),
-            Expanded(
-              child: ListView.builder(
-                itemCount: expenses.length,
-                itemBuilder: (context, int i) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    Container(
-                                      width: 50,
-                                      height: 50,
-                                      decoration: BoxDecoration(
-                                        color: Color(
-                                          expenses[i].category.color,
-                                        ),
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                    Image.asset(
-                                      'assets/${expenses[i].category.icon}.png',
-                                      scale: 2,
-                                      color: Colors.white,
-                                    ),
-                                    // transactionsData[i]['icon'],
-                                    // Icon(
-                                    //   // transactionsData[i]['icon'],
-                                    //   // color: Colors.white,
-                                    // ),
-                                  ],
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  expenses[i].category.name,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  "\$${expenses[i].amount}.00",
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                Text(
-                                  DateFormat(
-                                    'dd/MM/yyyy',
-                                  ).format(expenses[i].date),
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.outline,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+
+            // Key Metrics - horizontal scrollable row for mobile
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _metricCard(
+                    'Total Balance',
+                    totalsDisplay['overall']?['net'] ?? '\$0.00',
+                    'Income: ${totalsDisplay['overall']?['income'] ?? '\$0.00'} · Expense: ${totalsDisplay['overall']?['expense'] ?? '\$0.00'}',
+                    Colors.blue,
+                    Icons.account_balance_wallet,
+                  ),
+                  const SizedBox(width: 12),
+                  _metricCard(
+                    'Total Income',
+                    totalsDisplay['overall']?['income'] ?? '\$0.00',
+                    'Across all transactions',
+                    Colors.green,
+                    Icons.arrow_upward,
+                  ),
+                  const SizedBox(width: 12),
+                  _metricCard(
+                    'Total Expense',
+                    totalsDisplay['overall']?['expense'] ?? '\$0.00',
+                    'Across all transactions',
+                    Colors.red,
+                    Icons.arrow_downward,
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Financial Health Card
+            Card(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              elevation: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    const Text('Financial Health', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 12),
+                    CircleAvatar(
+                      radius: 50,
+                      backgroundColor: Colors.grey[200],
+                      child: Text(
+                        '${financialHealth['score'] ?? 0}/100',
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                     ),
-                  );
-                },
+                    const SizedBox(height: 8),
+                    Text(
+                      financialHealth['grade'] ?? '—',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: financialHealth['color'] == 'success'
+                            ? Colors.green
+                            : (financialHealth['color'] == 'danger' ? Colors.red : Colors.orange),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Income vs Expense Chart
+            Card(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              elevation: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    const Text('Income vs Expense', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 300,
+                      child: SfCartesianChart(
+                        primaryXAxis: CategoryAxis(),
+                        primaryYAxis: NumericAxis(),
+                        tooltipBehavior: TooltipBehavior(enable: true),
+                        legend: Legend(isVisible: true, position: LegendPosition.top),
+                        series: <CartesianSeries>[
+                          LineSeries<ChartData, String>(
+                            name: 'Income',
+                            dataSource: List.generate(monthly['labels']?.length ?? 0,
+                                (index) => ChartData(monthly['labels'][index], monthly['income'][index])),
+                            xValueMapper: (ChartData data, _) => data.x,
+                            yValueMapper: (ChartData data, _) => data.y,
+                            color: Colors.green,
+                          ),
+                          LineSeries<ChartData, String>(
+                            name: 'Expense',
+                            dataSource: List.generate(monthly['labels']?.length ?? 0,
+                                (index) => ChartData(monthly['labels'][index], monthly['expense'][index])),
+                            xValueMapper: (ChartData data, _) => data.x,
+                            yValueMapper: (ChartData data, _) => data.y,
+                            color: Colors.red,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Expense Category Pie Chart
+            Card(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              elevation: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    const Text('Expense Breakdown', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 300,
+                      child: SfCircularChart(
+                        legend: Legend(isVisible: true, overflowMode: LegendItemOverflowMode.wrap),
+                        tooltipBehavior: TooltipBehavior(enable: true),
+                        series: <CircularSeries>[
+                          PieSeries<PieData, String>(
+                            dataSource: List.generate(category['labels']?.length ?? 0,
+                                (index) => PieData(category['labels'][index], category['values'][index])),
+                            xValueMapper: (PieData data, _) => data.x,
+                            yValueMapper: (PieData data, _) => data.y,
+                            dataLabelSettings: const DataLabelSettings(isVisible: true),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Recent Transactions Table
+            Text('Recent Transactions', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                columns: const [
+                  DataColumn(label: Text('Type')),
+                  DataColumn(label: Text('Description')),
+                  DataColumn(label: Text('Category')),
+                  DataColumn(label: Text('Amount')),
+                  DataColumn(label: Text('Date')),
+                ],
+                rows: recentTransactions.map((tx) {
+                  final isIncome = tx['is_income'] ?? false;
+                  return DataRow(cells: [
+                    DataCell(Text(tx['type']?.toUpperCase() ?? '', style: TextStyle(color: isIncome ? Colors.green : Colors.red))),
+                    DataCell(Text(tx['description'] ?? '—')),
+                    DataCell(Text(tx['category_name'] ?? '')),
+                    DataCell(Text(tx['display_amount'] ?? '\$0.00', style: TextStyle(color: isIncome ? Colors.green : Colors.red))),
+                    DataCell(Text(tx['display_date'] ?? '—')),
+                  ]);
+                }).toList(),
               ),
             ),
           ],
@@ -343,4 +216,75 @@ class MainScreen extends StatelessWidget {
       ),
     );
   }
+
+  // Updated _metricCard
+  Widget _metricCard(String label, String value, String desc, Color color, IconData icon) {
+    return Container(
+      width: 180, // fixed width for horizontal scroll
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: [color.withOpacity(0.9), color.withOpacity(0.6)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.4),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: Colors.white.withOpacity(0.2),
+            child: Icon(icon, color: Colors.white, size: 28),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.white70,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 22,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            desc,
+            style: const TextStyle(
+              fontSize: 11,
+              color: Colors.white70,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ChartData {
+  final String x;
+  final double y;
+  ChartData(this.x, this.y);
+}
+
+class PieData {
+  final String x;
+  final double y;
+  PieData(this.x, this.y);
 }
