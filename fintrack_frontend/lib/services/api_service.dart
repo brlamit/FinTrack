@@ -465,6 +465,139 @@ class ApiService {
   }
 
   // -------------------------
+  // REPORT SHEET (balance-style report)
+  // -------------------------
+  static Future<Map<String, dynamic>> fetchReportSheet({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    try {
+      final headers = <String, String>{'Accept': 'application/json'};
+      if (token != null && token!.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final query = <String, String>{'format': 'json'};
+      if (startDate != null) {
+        query['start_date'] = startDate.toIso8601String().split('T').first;
+      }
+      if (endDate != null) {
+        query['end_date'] = endDate.toIso8601String().split('T').first;
+      }
+
+      final uri = Uri.parse(
+        '$backendBaseUrl/reports/spending',
+      ).replace(queryParameters: query);
+
+      final resp = await http.get(uri, headers: headers);
+
+      if (resp.statusCode != 200 || resp.body.isEmpty) {
+        final err = resp.body.isNotEmpty ? resp.body : 'Report sheet failed';
+        throw Exception('Report sheet failed: HTTP ${resp.statusCode} - $err');
+      }
+
+      final decoded = jsonDecode(resp.body);
+      if (decoded is Map && decoded['data'] is Map<String, dynamic>) {
+        return Map<String, dynamic>.from(decoded['data'] as Map);
+      }
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+      return <String, dynamic>{};
+    } catch (e) {
+      throw Exception('Failed to fetch report sheet: $e');
+    }
+  }
+
+  // Download balance-sheet report as PDF bytes (for saving/opening on device)
+  static Future<List<int>> downloadReportSheetPdf({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    try {
+      final headers = <String, String>{'Accept': 'application/pdf'};
+      if (token != null && token!.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final query = <String, String>{'format': 'pdf'};
+      if (startDate != null) {
+        query['start_date'] = startDate.toIso8601String().split('T').first;
+      }
+      if (endDate != null) {
+        query['end_date'] = endDate.toIso8601String().split('T').first;
+      }
+
+      final uri = Uri.parse(
+        '$backendBaseUrl/reports/report_sheet',
+      ).replace(queryParameters: query);
+
+      final resp = await http.get(uri, headers: headers);
+
+      if (resp.statusCode != 200) {
+        final err = resp.body.isNotEmpty ? resp.body : 'Report PDF failed';
+        throw Exception('Report PDF failed: HTTP ${resp.statusCode} - $err');
+      }
+
+      return resp.bodyBytes;
+    } catch (e) {
+      throw Exception('Failed to download report PDF: $e');
+    }
+  }
+
+  // -------------------------
+  // SPENDING REPORT (mirrors web reports page)
+  // -------------------------
+  static Future<Map<String, dynamic>> fetchSpendingReport({
+    required String groupBy, // 'category', 'date', or 'month'
+    DateTime? startDate,
+    DateTime? endDate,
+    int? categoryId,
+  }) async {
+    try {
+      final headers = <String, String>{'Accept': 'application/json'};
+      if (token != null && token!.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final query = <String, String>{'group_by': groupBy};
+      if (startDate != null) {
+        query['start_date'] = startDate.toIso8601String().split('T').first;
+      }
+      if (endDate != null) {
+        query['end_date'] = endDate.toIso8601String().split('T').first;
+      }
+      if (categoryId != null) {
+        query['category_id'] = categoryId.toString();
+      }
+
+      final uri = Uri.parse(
+        '$backendBaseUrl/reports/spending',
+      ).replace(queryParameters: query);
+
+      final resp = await http.get(uri, headers: headers);
+
+      if (resp.statusCode != 200 || resp.body.isEmpty) {
+        final err = resp.body.isNotEmpty ? resp.body : 'Spending report failed';
+        throw Exception(
+          'Spending report failed: HTTP ${resp.statusCode} - $err',
+        );
+      }
+
+      final decoded = jsonDecode(resp.body);
+      if (decoded is Map && decoded['data'] is Map<String, dynamic>) {
+        return Map<String, dynamic>.from(decoded['data'] as Map);
+      }
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+      return <String, dynamic>{};
+    } catch (e) {
+      throw Exception('Failed to fetch spending report: $e');
+    }
+  }
+
+  // -------------------------
   // CREATE TRANSACTION (backend)
   // -------------------------
   static Future<bool> createTransaction({

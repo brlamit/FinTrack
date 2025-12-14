@@ -52,8 +52,9 @@ class MyApp extends StatelessWidget {
         '/register': (_) => SignupScreen(),
         '/forgot-password': (_) => ForgotPasswordScreen(),
         '/home': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments
-              as Map<String, dynamic>;
+          final args =
+              ModalRoute.of(context)!.settings.arguments
+                  as Map<String, dynamic>;
 
           final user = args['user'] as Map<String, dynamic>;
           final dashboard = args['dashboard'] as Map<String, dynamic>;
