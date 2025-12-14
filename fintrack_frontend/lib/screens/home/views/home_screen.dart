@@ -71,10 +71,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             BottomNavigationBarItem(
               icon: Icon(
-                CupertinoIcons.graph_square_fill,
+                CupertinoIcons.doc_chart,
                 color: index == 1 ? selectedItem : unselectedItem,
               ),
-              label: "Stats",
+              label: "Reports",
             ),
           ],
         ),
@@ -112,9 +112,10 @@ class _HomeScreenState extends State<HomeScreen> {
               budgets: _dashboard['budgets'],
               insights: _dashboard['insights'],
               transactions: _dashboard['transactions'],
+              rawDashboard: _dashboard['raw'],
               onAddTransaction: _openAddTransaction,
             )
-          : const StatScreen(),
+          : StatScreen(rawDashboard: _dashboard['raw']),
     );
   }
 }

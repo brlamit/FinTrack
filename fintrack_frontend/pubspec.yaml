@@ -51,6 +51,9 @@ dependencies:
     flutter_bloc: ^9.1.1
     syncfusion_flutter_charts: ^31.2.18
     redacted: ^1.0.13
+    url_launcher: ^6.3.2
+    path_provider: ^2.1.4
+    open_filex: ^4.4.0
 
 dev_dependencies:
     flutter_test:
