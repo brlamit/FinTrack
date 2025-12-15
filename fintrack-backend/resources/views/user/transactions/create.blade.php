@@ -21,7 +21,7 @@
                         </div>
                     @endif
 
-                    <form method="POST" action="{{ route('user.transactions.store') }}">
+                    <form method="POST" action="{{ route('user.transactions.store') }}" enctype="multipart/form-data">
                         @csrf
 
                         @if($categories->isEmpty())
@@ -97,6 +97,14 @@
                                    id="date" name="date" value="{{ old('date', now()->format('Y-m-d')) }}" required>
                             @error('date')
                                 <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="receipt" class="form-label">Receipt (optional)</label>
+                            <input type="file" class="form-control @error('receipt') is-invalid @enderror" id="receipt" name="receipt" accept="image/*">
+                            @error('receipt')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
                             @enderror
                         </div>
 

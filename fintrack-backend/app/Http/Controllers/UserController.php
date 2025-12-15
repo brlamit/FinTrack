@@ -8,7 +8,9 @@ use App\Models\Group;
 use App\Models\Budget;
 use App\Models\Notification;
 use App\Models\Category;
+use App\Models\Receipt;
 use App\Services\OtpService;
+use App\Services\ReceiptOcrService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
@@ -23,8 +25,10 @@ use App\Models\Goal;
 
 class UserController extends Controller
 {
-    public function __construct(private readonly OtpService $otpService)
-    {
+    public function __construct(
+        private readonly OtpService $otpService,
+        private readonly ReceiptOcrService $receiptOcrService,
+    ) {
     }
     /**
      * Show user dashboard
@@ -1376,7 +1380,7 @@ public function dashboard(Request $request)
     {
         $validated = $request->validate([
             'description' => 'required|string|max:255',
-            'amount' => 'required|numeric|min:0.01',
+            'amount' => 'nullable|required_without:receipt|numeric|min:0.01',
             'type' => ['required', 'in:income,expense'],
             'category_id' => [
                 'required',
@@ -1386,6 +1390,7 @@ public function dashboard(Request $request)
                 ),
             ],
             'date' => 'required|date',
+            'receipt' => 'nullable|file|image|max:5120',
         ]);
 
         $category = Category::find($validated['category_id']);
@@ -1396,15 +1401,90 @@ public function dashboard(Request $request)
                 ->withInput();
         }
 
+        $receiptId = null;
+        $receipt = null;
+        if ($request->hasFile('receipt')) {
+            $file = $request->file('receipt');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $disk = env('FILESYSTEM_DISK', config('filesystems.default'));
+            $path = $file->storeAs('receipts/' . auth()->id(), $filename, $disk);
+
+            $pathToSave = $path;
+            $generated = null;
+            try {
+                $generated = \Storage::disk($disk)->url($path);
+            } catch (\Throwable $e) {
+                $generated = null;
+            }
+
+            $diskConfig = config("filesystems.disks.{$disk}", []);
+            $diskUrl = $diskConfig['url'] ?? null;
+            $bucket = $diskConfig['bucket'] ?? env('SUPABASE_PUBLIC_BUCKET');
+
+            if (!empty($generated) && !empty($bucket) && strpos($generated, trim($bucket, '/')) === false) {
+                $generated = null;
+            }
+
+            if (empty($generated) && !empty($diskUrl)) {
+                $encodedKey = implode('/', array_map('rawurlencode', explode('/', $path)));
+                if (!empty($bucket)) {
+                    $generated = rtrim($diskUrl, '/') . '/' . trim($bucket, '/') . '/' . ltrim($encodedKey, '/');
+                } else {
+                    $generated = rtrim($diskUrl, '/') . '/' . ltrim($encodedKey, '/');
+                }
+            }
+
+            if (!empty($generated)) {
+                $pathToSave = $generated;
+            }
+
+            $receipt = Receipt::create([
+                'user_id' => auth()->id(),
+                'filename' => $filename,
+                'original_filename' => $file->getClientOriginalName(),
+                'mime_type' => $file->getClientMimeType(),
+                'path' => $pathToSave,
+                'size' => $file->getSize(),
+                'processed' => false,
+            ]);
+
+            $this->receiptOcrService->process($receipt);
+            $receiptId = $receipt->id;
+        }
+
+        $amountInput = $validated['amount'] ?? null;
+        $numericAmount = $amountInput !== null && $amountInput !== ''
+            ? (float) $amountInput
+            : 0.0;
+
+        if ($numericAmount <= 0.0 && $receipt) {
+            $receipt->refresh();
+            $parsed = $receipt->parsed_data ?? [];
+            $estimatedTotal = is_array($parsed) && array_key_exists('estimated_total', $parsed)
+                ? (float) ($parsed['estimated_total'] ?? 0)
+                : 0.0;
+
+            if ($estimatedTotal > 0.0) {
+                $numericAmount = $estimatedTotal;
+            }
+        }
+
+        if ($numericAmount <= 0.0) {
+            return back()
+                ->withErrors(['amount' => 'Amount is required when a valid total cannot be read from the receipt.'])
+                ->withInput();
+        }
+
         Transaction::create([
             'user_id' => auth()->id(),
             'group_id' => null,
             'description' => $validated['description'],
-            'amount' => $validated['amount'],
+            'amount' => $numericAmount,
             'category_id' => $validated['category_id'],
             'transaction_date' => Carbon::parse($validated['date'])
                 ->startOfDay(),
             'type' => $validated['type'],
+            'receipt_id' => $receiptId,
         ]);
 
         return redirect()->route('user.dashboard')
