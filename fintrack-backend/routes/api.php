@@ -112,6 +112,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('receipts/presign', [ReceiptController::class, 'presign']);
     Route::post('receipts/complete', [ReceiptController::class, 'complete']);
     Route::get('receipts/{receipt}/download', [ReceiptController::class, 'download']);
+    Route::get('receipts/{receipt}/parsed', [ReceiptController::class, 'parsed']);
     Route::apiResource('receipts', ReceiptController::class);
 
     // -------------------------------------------------------

@@ -120,7 +120,7 @@
                         @csrf
                         <div class="col-md-4">
                             <label class="form-label">Total amount</label>
-                            <input type="number" step="0.01" name="amount" class="form-control" id="total-amount" required>
+                            <input type="number" step="0.01" name="amount" class="form-control" id="total-amount">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Transaction type</label>

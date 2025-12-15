@@ -51,11 +51,11 @@
                                 @enderror
                             </div>
                             <div class="col-md-4 mb-3">
-                                <label for="amount" class="form-label">Amount <span class="text-danger">*</span></label>
+                                <label for="amount" class="form-label">Amount</label>
                                 <div class="input-group">
                                     <span class="input-group-text">$</span>
                                     <input type="number" class="form-control @error('amount') is-invalid @enderror" 
-                                           id="amount" name="amount" step="0.01" value="{{ old('amount') }}" required>
+                                           id="amount" name="amount" step="0.01" value="{{ old('amount') }}">
                                 </div>
                                 @error('amount')
                                     <div class="invalid-feedback d-block">{{ $message }}</div>
