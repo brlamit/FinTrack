@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../../services/api_service.dart';
@@ -22,6 +23,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   bool _loadingCategories = true;
   bool _saving = false;
   String? _error;
+
+  XFile? _receiptImage;
+  final ImagePicker _imagePicker = ImagePicker();
 
   @override
   void initState() {
@@ -69,19 +73,22 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   Future<void> _save() async {
     final amountText = _amountController.text.trim();
-    if (amountText.isEmpty || _selectedCategory == null) {
+    if (_selectedCategory == null) {
       setState(() {
-        _error = 'Please enter amount and select a category.';
+        _error = 'Please select a category.';
       });
       return;
     }
 
-    final amount = double.tryParse(amountText.replaceAll(',', ''));
-    if (amount == null || amount <= 0) {
-      setState(() {
-        _error = 'Please enter a valid amount.';
-      });
-      return;
+    double? amount;
+    if (amountText.isNotEmpty) {
+      amount = double.tryParse(amountText.replaceAll(',', ''));
+      if (amount == null || amount <= 0) {
+        setState(() {
+          _error = 'Please enter a valid amount.';
+        });
+        return;
+      }
     }
 
     final int? categoryId = _selectedCategory['id'] as int?;
@@ -98,12 +105,68 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     });
 
     try {
+      int? receiptId;
+
+      // If user attached a receipt, upload it and try to infer amount
+      if (_receiptImage != null) {
+        final bytes = await _receiptImage!.readAsBytes();
+        final fileName = _receiptImage!.name.isNotEmpty
+            ? _receiptImage!.name
+            : 'receipt_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+        final receipt = await ApiService.uploadReceiptForTransaction(
+          filename: fileName,
+          bytes: bytes,
+        );
+
+        receiptId = receipt['id'] as int?;
+
+        // If amount not provided, try to use OCR estimated_total
+        if ((amount == null || amount <= 0) && receipt['parsed_data'] is Map) {
+          final parsed = receipt['parsed_data'] as Map;
+          final est = parsed['estimated_total'];
+          if (est != null) {
+            final estVal = double.tryParse(est.toString());
+            if (estVal != null && estVal > 0) {
+              amount = estVal;
+
+              // Show a hint to the user about the detected amount
+              if (mounted) {
+                final formatted = estVal.toStringAsFixed(2);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Detected amount from receipt: $formatted',
+                    ),
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+
+                // Also pre-fill the amount field so the user
+                // can see and adjust it before saving.
+                _amountController.text = formatted;
+              }
+            }
+          }
+        }
+      }
+
+      if (amount == null || amount <= 0) {
+        setState(() {
+          _saving = false;
+          _error =
+              'Please enter a valid amount or attach a readable receipt.';
+        });
+        return;
+      }
+
       final ok = await ApiService.createTransaction(
         categoryId: categoryId,
         amount: amount,
         type: _type,
         transactionDate: _selectedDate,
         description: _descriptionController.text.trim(),
+        receiptId: receiptId,
       );
       if (ok && mounted) {
         Navigator.pop(context, true);
@@ -146,6 +209,32 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
                 hintText: 'Enter amount',
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Receipt (optional)',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _saving
+                  ? null
+                  : () async {
+                      final picked = await _imagePicker.pickImage(
+                        source: ImageSource.gallery,
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          _receiptImage = picked;
+                        });
+                      }
+                    },
+              icon: const Icon(Icons.receipt_long),
+              label: Text(
+                _receiptImage != null
+                    ? _receiptImage!.name
+                    : 'Choose image (bill/receipt)',
               ),
             ),
             const SizedBox(height: 16),

@@ -109,6 +109,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // -------------------------------------------------------
     // 🧾 RECEIPTS
     // -------------------------------------------------------
+    Route::post('receipts/upload', [ReceiptController::class, 'uploadDirect']);
     Route::post('receipts/presign', [ReceiptController::class, 'presign']);
     Route::post('receipts/complete', [ReceiptController::class, 'complete']);
     Route::get('receipts/{receipt}/download', [ReceiptController::class, 'download']);

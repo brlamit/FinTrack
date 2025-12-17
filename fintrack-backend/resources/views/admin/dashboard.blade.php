@@ -427,7 +427,7 @@
                                     <div class="fw-semibold">${{ number_format($value, 2) }}</div>
                                     <small class="text-muted">{{ number_format($percentage, 1) }}%</small>
                                 </div>
-                            </div>
+                            </div>                            
                         @endforeach
                     </div>
                 @else
