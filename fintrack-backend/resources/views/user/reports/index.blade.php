@@ -328,15 +328,17 @@ function updateSummary(summary) {
             : (v || '0.00');
 
     const totalExpenses = Number(summary.total_expenses ?? 0);
+    
     const totalIncome   = Number(summary.total_income ?? 0);
-    const net           = Number(summary.net ?? (totalIncome - totalExpenses));
+    const net           = Number(totalIncome - totalExpenses);
+    const total = Number(summary.net_total ?? 0);
 
     document.getElementById('summaryExpenses').textContent = fmt(totalExpenses);
     document.getElementById('summaryCount').textContent    = summary.transaction_count ?? '0';
 
     const netEl = document.getElementById('summaryNet');
-    const sign  = net >= 0 ? '+' : '−';
-    netEl.textContent = sign + fmt(Math.abs(net));
+    const sign  = total >= 0 ? '+' : '−';
+    netEl.textContent = sign + fmt(Math.abs(total));
 }
 
     function downloadChartAsImage(chart, filename) {

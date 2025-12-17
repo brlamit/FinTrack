@@ -16,6 +16,7 @@ class ReportController extends Controller
      */
     public function spending(Request $request): JsonResponse
     {
+        $user = $request->user();
         $validator = Validator::make($request->all(), [
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date',
@@ -45,8 +46,23 @@ class ReportController extends Controller
 
         $report = [];
 
-        // Capture totals before we modify the query with GROUP BY / ORDER BY clauses
+    //     // Capture totals before we modify the query with GROUP BY / ORDER BY clauses
         $totalExpenses = (clone $query)->sum('amount');
+        $totalIncome = (clone $query)->where('type', 'income')->sum('amount');
+
+        $overallIncome = Transaction::query()
+        ->where('user_id', auth()->id())
+        ->whereNull('group_id')
+        ->where('type', 'income')
+        ->sum('amount');
+
+    $overallExpense = Transaction::query()
+        ->where('user_id', auth()->id())
+        ->whereNull('group_id')
+        ->where('type', 'expense')
+        ->sum('amount');
+
+    $totalNet = $overallIncome - $overallExpense;
         $transactionCount = (clone $query)->count();
 
         switch ($groupBy) {
@@ -114,6 +130,8 @@ class ReportController extends Controller
                 'report' => $report,
                 'summary' => [
                     'total_expenses' => $totalExpenses,
+                     'total_income' => $totalIncome,
+                    'net_total' => $totalNet,
                     'transaction_count' => $transactionCount,
                 ],
             ],
