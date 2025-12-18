@@ -16,7 +16,9 @@ return [
     |
     */
 
-    'default' => env('DB_CONNECTION', 'sqlite'),
+   'default' => env('DB_CONNECTION', 'pgsql'),
+
+
 
     /*
     |--------------------------------------------------------------------------
@@ -85,24 +87,32 @@ return [
 
         'pgsql' => [
             'driver' => 'pgsql',
-            // 'url' => env('DB_URL'),
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '5432'),
-            'database' => env('DB_DATABASE', 'laravel'),
-            'username' => env('DB_USERNAME', 'root'),
+            'database' => env('DB_DATABASE', 'forge'),
+            'username' => env('DB_USERNAME', 'forge'),
             'password' => env('DB_PASSWORD', ''),
-            'charset' => env('DB_CHARSET', 'utf8'),
+            'charset' => 'utf8',
             'prefix' => '',
-            'prefix_indexes' => true,
-            'search_path' => 'public',
+            'schema' => 'public',
             'sslmode' => 'prefer',
-
-            
-    'options' => extension_loaded('pdo_pgsql') ? [
-        PDO::ATTR_PERSISTENT => false,
-        PDO::PGSQL_ATTR_DISABLE_PREPARES => true,
-    ] : [],
         ],
+
+
+    'pgsql_supabase' => [
+        'driver' => 'pgsql',
+        'host' => env('SUPABASE_DB_HOST'),
+        'port' => env('SUPABASE_DB_PORT', 5432),
+        'database' => env('SUPABASE_DB_DATABASE'),
+        'username' => env('SUPABASE_DB_USERNAME'),
+        'password' => env('SUPABASE_DB_PASSWORD'),
+        'charset' => 'utf8',
+        'prefix' => '',
+        'search_path' => 'public',
+        'sslmode' => env('SUPABASE_DB_SSLMODE', 'require'),
+    ],
+
+
 
         'sqlsrv' => [
             'driver' => 'sqlsrv',

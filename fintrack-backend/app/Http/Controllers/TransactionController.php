@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use App\Jobs\SyncTransactionToSupabase;
+
 
 class TransactionController extends Controller
 {
@@ -148,7 +150,8 @@ class TransactionController extends Controller
             ], 422);
         }
 
-        DB::beginTransaction();
+       
+      DB::beginTransaction();
         try {
             $transaction = Transaction::create([
                 'user_id' => auth()->id(),
@@ -162,23 +165,33 @@ class TransactionController extends Controller
                 'is_recurring' => $request->is_recurring ?? false,
                 'recurring_frequency' => $request->recurring_frequency,
                 'recurring_end_date' => $request->recurring_end_date,
+                'synced_to_supabase' => false, // 👈 important
             ]);
 
             DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Transaction created successfully',
-                'data' => $transaction->load(['category', 'receipt']),
+    // 🚀 Background sync (ASYNC)
+        SyncTransactionToSupabase::dispatch($transaction);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Transaction created successfully',
+            'data' => $transaction->load(['category', 'receipt']),
             ], 201);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create transaction',
-            ], 500);
-        }
+
+        logger()->error('Transaction store failed', [
+            'error' => $e->getMessage()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to create transaction',
+        ], 500);
+    }
+
     }
 
     /**
