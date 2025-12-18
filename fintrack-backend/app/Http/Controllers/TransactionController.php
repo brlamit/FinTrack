@@ -72,7 +72,7 @@ class TransactionController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'category_id' => 'required|exists:categories,id',
-            'amount' => 'required|numeric|min:0.01|max:999999.99',
+            'amount' => 'nullable|required_without:receipt_id|numeric|min:0.01|max:999999.99',
             'description' => 'nullable|string|max:255',
             'transaction_date' => 'required|date|before_or_equal:today',
             'type' => 'required|in:income,expense',
@@ -108,6 +108,7 @@ class TransactionController extends Controller
         }
 
         // Verify receipt belongs to user if provided
+        $receipt = null;
         if ($request->receipt_id) {
             $receipt = auth()->user()->receipts()->find($request->receipt_id);
             if (!$receipt) {
@@ -118,12 +119,41 @@ class TransactionController extends Controller
             }
         }
 
+        // If amount is missing or zero but we have a receipt, try to
+        // default the amount from the OCR-parsed estimated_total.
+        $amount = $request->input('amount');
+        $numericAmount = $amount !== null && $amount !== ''
+            ? (float) $amount
+            : 0.0;
+
+        if ($numericAmount <= 0.0 && $receipt) {
+            $receipt->refresh();
+            $parsed = $receipt->parsed_data ?? [];
+            $estimatedTotal = is_array($parsed) && array_key_exists('estimated_total', $parsed)
+                ? (float) ($parsed['estimated_total'] ?? 0)
+                : 0.0;
+
+            if ($estimatedTotal > 0.0) {
+                $numericAmount = $estimatedTotal;
+            }
+        }
+
+        if ($numericAmount <= 0.0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Amount is required when a valid total cannot be read from the receipt.',
+                'errors' => [
+                    'amount' => ['Amount is required or must be derivable from the attached receipt.'],
+                ],
+            ], 422);
+        }
+
         DB::beginTransaction();
         try {
             $transaction = Transaction::create([
                 'user_id' => auth()->id(),
                 'category_id' => $request->category_id,
-                'amount' => $request->amount,
+                'amount' => $numericAmount,
                 'description' => $request->description,
                 'transaction_date' => $request->transaction_date,
                 'type' => $request->type,

@@ -6,6 +6,7 @@ use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\User;
 use App\Mail\GroupInvitationMail;
+use App\Services\ReceiptOcrService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -14,6 +15,9 @@ use Illuminate\Support\Str;
 
 class GroupController extends Controller
 {
+    public function __construct(private readonly ReceiptOcrService $receiptOcrService)
+    {
+    }
     /**
      * Display a listing of the user's groups.
      */
@@ -259,7 +263,7 @@ class GroupController extends Controller
 
         $validator = Validator::make($request->all(), [
             'type' => 'required|in:income,expense',
-            'amount' => 'required|numeric|min:0.01',
+            'amount' => 'nullable|required_without:receipt|numeric|min:0.01',
             'description' => 'nullable|string|max:255',
             'category_id' => 'nullable|exists:categories,id',
             'split_type' => 'required|in:equal,custom,percentage',
@@ -298,6 +302,7 @@ class GroupController extends Controller
 
         try {
             $receiptId = null;
+            $receipt = null;
             if ($request->hasFile('receipt')) {
                 $file = $request->file('receipt');
                 $filename = time() . '_' . $file->getClientOriginalName();
@@ -343,6 +348,8 @@ class GroupController extends Controller
                     'size' => $file->getSize(),
                     'processed' => false,
                 ]);
+                // OCR the receipt so parsed JSON is available for group transactions
+                $this->receiptOcrService->process($receipt);
                 $receiptId = $receipt->id;
             }
 
@@ -365,7 +372,28 @@ class GroupController extends Controller
             }
 
             $splitType = $request->input('split_type');
-            $amount = (float) $request->input('amount');
+
+            $amountInput = $request->input('amount');
+            $amount = $amountInput !== null && $amountInput !== ''
+                ? (float) $amountInput
+                : 0.0;
+
+            // If amount not provided but we have a receipt with OCR data, try to use the estimated total
+            if ($amount <= 0.0 && $receipt) {
+                $receipt->refresh();
+                $parsed = $receipt->parsed_data ?? [];
+                $estimatedTotal = is_array($parsed) && array_key_exists('estimated_total', $parsed)
+                    ? (float) ($parsed['estimated_total'] ?? 0)
+                    : 0.0;
+
+                if ($estimatedTotal > 0.0) {
+                    $amount = $estimatedTotal;
+                }
+            }
+
+            if ($amount <= 0.0) {
+                return $handleError('Amount is required when a valid total cannot be read from the receipt.');
+            }
             $rawSplits = $request->input('splits', []);
             $computedSplits = [];
 
