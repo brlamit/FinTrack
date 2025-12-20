@@ -10,14 +10,161 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
+    <style>
+        body.user-theme {
+            background: radial-gradient(circle at top left, rgba(15,23,42,1), rgba(15,23,42,0.98));
+            color: #e5e7eb;
+        }
+
+        body.user-theme.theme-light {
+            background: #f8fafc;
+            color: #020617;
+        }
+
+        body.user-theme .navbar.fintrack-navbar {
+            background: rgba(15,23,42,0.96) !important;
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-bottom: 1px solid rgba(148,163,184,0.45);
+        }
+
+        body.user-theme.theme-light .navbar.fintrack-navbar {
+            background: rgba(255,255,255,0.96) !important;
+            border-bottom-color: rgba(148,163,184,0.25);
+        }
+
+        /* Navbar text colors for dark/light */
+        body.user-theme .navbar.fintrack-navbar .navbar-brand,
+        body.user-theme .navbar.fintrack-navbar .nav-link,
+        body.user-theme .navbar.fintrack-navbar .dropdown-toggle,
+        body.user-theme .navbar.fintrack-navbar .nav-link i {
+            color: #e5e7eb !important;
+        }
+
+        body.user-theme.theme-light .navbar.fintrack-navbar .navbar-brand,
+        body.user-theme.theme-light .navbar.fintrack-navbar .nav-link,
+        body.user-theme.theme-light .navbar.fintrack-navbar .dropdown-toggle,
+        body.user-theme.theme-light .navbar.fintrack-navbar .nav-link i {
+            color: #020617 !important;
+        }
+
+        body.user-theme:not(.theme-light) .navbar.fintrack-navbar .nav-link.active {
+            color: #ffffff !important;
+            font-weight: 600;
+        }
+
+        body.user-theme.theme-light .navbar.fintrack-navbar .nav-link.active {
+            color: #0f172a !important;
+            font-weight: 600;
+        }
+
+        /* Dropdown menu theming */
+        body.user-theme .dropdown-menu {
+            background-color: #020617;
+            border-color: rgba(30,64,175,0.6);
+        }
+
+        body.user-theme .dropdown-menu .dropdown-item,
+        body.user-theme .dropdown-menu .dropdown-item i {
+            color: #e5e7eb;
+        }
+
+        body.user-theme .dropdown-menu .dropdown-item:hover,
+        body.user-theme .dropdown-menu .dropdown-item:focus {
+            background-color: rgba(15,23,42,0.9);
+        }
+
+        body.user-theme.theme-light .dropdown-menu {
+            background-color: #ffffff;
+            border-color: rgba(148,163,184,0.35);
+        }
+
+        /* Card base colors so dashboard content is readable but still Bootstrap-like */
+        body.user-theme .card {
+            background-color: #020617;
+            color: #e5e7eb;
+            border-color: rgba(30,64,175,0.55);
+        }
+
+        body.user-theme.theme-light .card {
+            background-color: #ffffff;
+            color: #020617;
+            border-color: rgba(148,163,184,0.35);
+        }
+
+        body.user-theme .card-header.bg-white,
+        body.user-theme .card-header {
+            background-color: rgba(15,23,42,0.98) !important;
+            border-bottom-color: rgba(30,64,175,0.55) !important;
+        }
+
+        body.user-theme.theme-light .card-header.bg-white,
+        body.user-theme.theme-light .card-header {
+            background-color: #ffffff !important;
+            border-bottom-color: rgba(148,163,184,0.35) !important;
+        }
+
+        /* Muted text should stay readable in both themes */
+        body.user-theme .text-muted {
+            color: #9ca3af !important;
+        }
+
+        body.user-theme.theme-light .text-muted {
+            color: #6b7280 !important;
+        }
+
+        .fintrack-brand-mark {
+            width: 36px;
+            height: 36px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #14b8a6, #0ea5e9);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 700;
+            font-size: 18px;
+            margin-right: .5rem;
+        }
+
+        .fintrack-brand-text {
+            background: linear-gradient(90deg, #14b8a6, #0ea5e9);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-weight: 600;
+            letter-spacing: .03em;
+        }
+
+        .theme-toggle-btn-global {
+            border-radius: 999px;
+            border: 1px solid rgba(148,163,184,0.55);
+            background: rgba(15,23,42,0.9);
+            color: #e5e7eb;
+            padding: .4rem .9rem;
+            font-size: .8rem;
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+        }
+
+        body.user-theme.theme-light .theme-toggle-btn-global {
+            background: #ffffff;
+            color: #0f172a;
+        }
+    </style>
+
     @stack('styles')
 </head>
-<body class="bg-light">
+<body class="bg-light user-theme">
 
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm py-3">
+    <nav class="navbar navbar-expand-lg navbar-light shadow-sm py-3 fintrack-navbar">
         <div class="container px-4">
-            <a class="navbar-brand fw-bold" href="{{ route('user.dashboard') }}">FinTrack</a>
+            <a class="navbar-brand d-flex align-items-center" href="{{ route('user.dashboard') }}">
+                <span class="fintrack-brand-mark">FT</span>
+                <span class="fintrack-brand-text">FinTrack</span>
+            </a>
 
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#userNavbar">
                 <span class="navbar-toggler-icon"></span>
@@ -33,6 +180,12 @@
                 </ul>
 
                 <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item me-3 d-none d-md-block">
+                        <button id="user-theme-toggle" type="button" class="btn btn-sm theme-toggle-btn-global">
+                            <i class="fas fa-sun"></i>
+                            <span>Light mode</span>
+                        </button>
+                    </li>
                     <!-- Notifications Dropdown -->
                     <li class="nav-item dropdown me-3">
                         @php
@@ -186,6 +339,46 @@
                 }, 7000);
             });
         });
+    </script>
+
+    <!-- Global FinTrack theme toggle -->
+    <script>
+        (function () {
+            const body = document.body;
+            const storageKey = 'fintrack-theme';
+            const toggle = document.getElementById('user-theme-toggle');
+            let current = localStorage.getItem(storageKey) || 'dark';
+
+            function applyTheme() {
+                if (!body.classList.contains('user-theme')) {
+                    body.classList.add('user-theme');
+                }
+                if (current === 'light') {
+                    body.classList.add('theme-light');
+                } else {
+                    body.classList.remove('theme-light');
+                }
+            }
+
+            function updateLabel() {
+                if (!toggle) return;
+                toggle.innerHTML = current === 'light'
+                    ? '<i class="fas fa-moon"></i><span>Dark mode</span>'
+                    : '<i class="fas fa-sun"></i><span>Light mode</span>';
+            }
+
+            applyTheme();
+            updateLabel();
+
+            if (toggle) {
+                toggle.addEventListener('click', function () {
+                    current = current === 'light' ? 'dark' : 'light';
+                    localStorage.setItem(storageKey, current);
+                    applyTheme();
+                    updateLabel();
+                });
+            }
+        })();
     </script>
 
     <!-- Supabase Realtime Notifications -->

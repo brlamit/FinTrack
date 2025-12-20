@@ -3,17 +3,54 @@
 @section('title', 'Dashboard')
 
 @section('content')
-<div class="container-fluid py-4">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h2 class="mb-1">Welcome, {{ auth()->user()->name }}! 👋</h2>
-            <p class="text-muted">Here's your financial overview</p>
+<div class="container-fluid py-4 dashboard-shell">
+    <div class="row mb-4 align-items-center">
+        <div class="col-12 col-lg-8">
+            <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-2">
+                <div>
+                    <span class="badge rounded-pill bg-gradient-primary-soft mb-2">Dashboard</span>
+                    <h2 class="mb-1 fw-semibold">
+                        Welcome back, <span class="text-gradient">{{ auth()->user()->name }}</span> 👋
+                    </h2>
+                    <p class="text-muted mb-0">A quick snapshot of your money today</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-4 mt-3 mt-lg-0 d-flex justify-content-lg-end">
+            <div class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill bg-light-subtle border border-light flex-wrap health-pill">
+                <span class="small text-muted">Financial health:</span>
+                <span class="badge rounded-pill bg-{{ data_get($financialHealth, 'color', 'info') }} bg-opacity-10 text-{{ data_get($financialHealth, 'color', 'info') }} fw-semibold">
+                    {{ data_get($financialHealth, 'grade', '—') }} · {{ data_get($financialHealth, 'score', 0) }}/100
+                </span>
+            </div>
         </div>
     </div>
     <!-- Key Metrics + Quick Actions -->
-     <div class="row g-4 mb-5 align-items-stretch">
+    <div class="row g-4 mb-1 align-items-stretch">
         <!-- Key Metrics (Left Side) -->
         <div class="col-lg-8">
+            @php
+                $activeBudgetCount = !empty($activeBudgets ?? []) ? count($activeBudgets) : 0;
+            @endphp
+            <div class="mb-3">
+                <div class="summary-strip d-flex flex-wrap align-items-center gap-3">
+                    <span class="badge rounded-pill bg-gradient-primary-soft">At a glance</span>
+                    <div class="summary-chip">
+                        <span class="summary-chip-label">Health grade</span>
+                        <span class="summary-chip-value text-{{ data_get($financialHealth, 'color', 'info') }}">
+                            {{ data_get($financialHealth, 'grade', '—') }} · {{ data_get($financialHealth, 'score', 0) }}/100
+                        </span>
+                    </div>
+                    <div class="summary-chip">
+                        <span class="summary-chip-label">Active budgets</span>
+                        <span class="summary-chip-value">{{ $activeBudgetCount }}</span>
+                    </div>
+                    <div class="summary-chip">
+                        <span class="summary-chip-label">Active goals</span>
+                        <span class="summary-chip-value">{{ $goalCount }}</span>
+                    </div>
+                </div>
+            </div>
             <div class="row g-4">
                 @php
                     $metrics = [
@@ -51,21 +88,21 @@
         </div>
 
         <div class="col-lg-4 d-flex flex-column gap-3">
-                        <div class="card shadow-sm quick-actions-card">
-                <div class="card-header bg-primary text-white">
+            <div class="card shadow-sm quick-actions-card border-0 rounded-4 overflow-hidden h-100">
+                <div class="card-header quick-actions-header text-white border-0">
                     <h5 class="mb-0">Quick Actions</h5>
                 </div>
                 <div class="card-body d-flex flex-column gap-2">
-                    <a href="{{ route('user.transactions.create') }}" class="btn btn-primary w-100 rounded-pill">
+                    <a href="{{ route('user.transactions.create') }}" class="btn btn-primary w-100 rounded-pill shadow-sm">
                         <i class="fas fa-plus-circle me-1"></i> Add Transaction
                     </a>
-                    <a href="{{ route('user.budgets') }}" class="btn btn-outline-primary w-100 rounded-pill">
+                    <a href="{{ route('user.budgets') }}" class="btn btn-outline-primary w-100 rounded-pill btn-soft-primary">
                         <i class="fas fa-chart-pie me-1"></i> Manage Budgets
                     </a>
-                    <a href="{{ route('user.groups') }}" class="btn btn-outline-primary w-100 rounded-pill">
+                    <a href="{{ route('user.groups') }}" class="btn btn-outline-primary w-100 rounded-pill btn-soft-primary">
                         <i class="fas fa-users me-1"></i> My Groups
                     </a>
-                    <a href="{{ route('user.reports') }}" class="btn btn-outline-primary w-100 rounded-pill">
+                    <a href="{{ route('user.reports') }}" class="btn btn-outline-primary w-100 rounded-pill btn-soft-primary">
                         <i class="fas fa-file-alt me-1"></i> View Reports
                     </a>
                 </div>
@@ -73,7 +110,118 @@
         </div>
         
     </div>
-<!-- FINANCIAL HEALTH SCORE & WARNINGS -->
+
+    @if(!empty($insights ?? []) || !empty($topExpenseCategory ?? []))
+        <div class="row g-4 mb-3 align-items-stretch">
+            <div class="col-lg-8">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header border-0 spending-header">
+                        <div class="d-flex flex-column flex-md-row justify-content-between">
+                            <div>
+                                <h5 class="mb-0">Spending Insights</h5>
+                                <small class="text-muted">Snapshot for {{ $chartWindowDescription }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3">
+                            @foreach(($insights ?? []) as $insight)
+                                <div class="col">
+                                    <div class="p-3 rounded-4 border spending-insight-card h-100">
+                                        <p class="text-muted text-uppercase small mb-1">{{ data_get($insight, 'label') }}</p>
+                                        <h4 class="fw-bold mb-1 {{ data_get($insight, 'class') }}">{{ data_get($insight, 'value') }}</h4>
+                                        <p class="small text-muted mb-0">{{ data_get($insight, 'description') }}</p>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header border-0 spending-header">
+                        <h5 class="mb-0">Top Spending Focus</h5>
+                        <small class="text-muted">Based on {{ $chartWindowDescription }}</small>
+                    </div>
+                    <div class="card-body d-flex flex-column justify-content-center text-center">
+                        <h5 class="fw-semibold">{{ data_get($topExpenseCategory ?? [], 'label', 'No expenses recorded') }}</h5>
+                        <p class="display-6 fw-bold text-danger mb-2">{{ data_get($topExpenseCategory ?? [], 'amount', '$0.00') }}</p>
+                        @if(data_get($topExpenseCategory ?? [], 'share'))
+                            <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold">{{ data_get($topExpenseCategory ?? [], 'share') }}% of expenses</span>
+                        @else
+                            <span class="badge bg-secondary bg-opacity-10 text-secondary fw-semibold">No spending yet</span>
+                        @endif
+                        <small class="text-muted mt-3">Use this insight to plan your next budget move.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Charts: bring visual trends up near the top -->
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white border-0 pb-0">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <div>
+                            <h5 class="mb-1">Income vs Expense</h5>
+                            <span class="text-muted small" data-range-label>{{ $chartWindowDescription ?? 'Loading timeline...' }}</span>
+                        </div>
+                        <div class="chart-toolbar d-flex flex-wrap gap-2">
+                            <div class="d-flex flex-wrap gap-2" role="group" aria-label="Select range">
+                                <button type="button" class="control-pill" data-range="3" role="button" tabindex="0" aria-pressed="false">3M</button>
+                                <button type="button" class="control-pill" data-range="6" role="button" tabindex="0" aria-pressed="false">6M</button>
+                                <button type="button" class="control-pill" data-range="12" role="button" tabindex="0" aria-pressed="false">12M</button>
+                                <button type="button" class="control-pill" data-range="all" role="button" tabindex="0" aria-pressed="false">All</button>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2" role="group" aria-label="Chart type">
+                                <button type="button" class="control-pill active" data-chart-type="line" role="button" tabindex="0" aria-pressed="true" aria-label="Line chart"><i class="fas fa-chart-line"></i></button>
+                                <button type="button" class="control-pill" data-chart-type="bar" role="button" tabindex="0" aria-pressed="false" aria-label="Bar chart"><i class="fas fa-chart-column"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-wrapper" style="height:320px;">
+                        <canvas id="incomeExpenseChart"></canvas>
+                    </div>
+                    <div class="d-flex flex-wrap gap-4 mt-4">
+                        <div>
+                            <span class="text-muted text-uppercase small fw-semibold">Income (this month)</span>
+                            <p class="mb-0 fw-semibold fs-5 text-success">${{ number_format(data_get($totalsDisplay['monthly'] ?? [], 'income', 0), 2) }}</p>
+                        </div>
+                        <div>
+                            <span class="text-muted text-uppercase small fw-semibold">Expense (this month)</span>
+                            <p class="mb-0 fw-semibold fs-5 text-danger">${{ number_format(data_get($totalsDisplay['monthly'] ?? [], 'expense', 0), 2) }}</p>
+                        </div>
+                        <div>
+                            <span class="text-muted text-uppercase small fw-semibold">Transactions (this month)</span>
+                            <p class="mb-0 fw-semibold fs-5">{{ number_format(data_get($totalsDisplay['monthly'] ?? [], 'transactions', 0)) }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ ucfirst($filters['category_type'] ?? 'expense') }} Breakdown</h5>
+                    <span class="text-muted small">Top categories</span>
+                </div>
+                <div class="card-body">
+                    @if(!empty($chartData['category']['labels']))
+                        <canvas id="expenseCategoryChart" height="260"></canvas>
+                    @else
+                        <p class="text-muted text-center mb-0">Add {{ ucfirst($filters['category_type'] ?? 'expense') }} transactions to see category insights.</p>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FINANCIAL HEALTH SCORE & WARNINGS -->
 <div class="row g-4 mb-5">
     <!-- Financial Health Score Card -->
     <div class="col-lg-4">
@@ -178,53 +326,6 @@
         @endif
     </div>
 </div>
-    @if(!empty($insights ?? []) || !empty($topExpenseCategory ?? []))
-        <div class="row g-4 mb-4 align-items-stretch">
-            <div class="col-lg-8">
-                <div class="card shadow-sm h-100 border-0">
-                    <div class="card-header bg-white border-0">
-                        <div class="d-flex flex-column flex-md-row justify-content-between">
-                            <div>
-                                <h5 class="mb-0">Spending Insights</h5>
-                                <small class="text-muted">Snapshot for {{ $chartWindowDescription }}</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3">
-                            @foreach(($insights ?? []) as $insight)
-                                <div class="col">
-                                    <div class="p-3 rounded-4 border bg-light h-100">
-                                        <p class="text-muted text-uppercase small mb-1">{{ data_get($insight, 'label') }}</p>
-                                        <h4 class="fw-bold mb-1 {{ data_get($insight, 'class') }}">{{ data_get($insight, 'value') }}</h4>
-                                        <p class="small text-muted mb-0">{{ data_get($insight, 'description') }}</p>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4">
-                <div class="card shadow-sm h-100 border-0">
-                    <div class="card-header bg-white border-0">
-                        <h5 class="mb-0">Top Spending Focus</h5>
-                        <small class="text-muted">Based on {{ $chartWindowDescription }}</small>
-                    </div>
-                    <div class="card-body d-flex flex-column justify-content-center text-center">
-                        <h5 class="fw-semibold">{{ data_get($topExpenseCategory ?? [], 'label', 'No expenses recorded') }}</h5>
-                        <p class="display-6 fw-bold text-danger mb-2">{{ data_get($topExpenseCategory ?? [], 'amount', '$0.00') }}</p>
-                        @if(data_get($topExpenseCategory ?? [], 'share'))
-                            <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold">{{ data_get($topExpenseCategory ?? [], 'share') }}% of expenses</span>
-                        @else
-                            <span class="badge bg-secondary bg-opacity-10 text-secondary fw-semibold">No spending yet</span>
-                        @endif
-                        <small class="text-muted mt-3">Use this insight to plan your next budget move.</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    @endif
 
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
@@ -251,79 +352,25 @@
                     @endif
                 </div>
             </div>
-    <!-- Charts -->
-    <div class="row g-4 mb-4">
-        <div class="col-12 col-lg-8">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-white border-0 pb-0">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-                        <div>
-                            <h5 class="mb-1">Income vs Expense</h5>
-                            <span class="text-muted small" data-range-label>{{ $chartWindowDescription ?? 'Loading timeline...' }}</span>
-                        </div>
-                       <div class="chart-toolbar d-flex flex-wrap gap-2">
-                        <div class="d-flex flex-wrap gap-2" role="group" aria-label="Select range">
-                            <button type="button" class="control-pill" data-range="3" role="button" tabindex="0" aria-pressed="false">3M</button>
-                            <button type="button" class="control-pill" data-range="6" role="button" tabindex="0" aria-pressed="false">6M</button>
-                            <button type="button" class="control-pill" data-range="12" role="button" tabindex="0" aria-pressed="false">12M</button>
-                            <button type="button" class="control-pill" data-range="all" role="button" tabindex="0" aria-pressed="false">All</button>
-                        </div>
-                        <div class="d-flex flex-wrap gap-2" role="group" aria-label="Chart type">
-                            <button type="button" class="control-pill active" data-chart-type="line" role="button" tabindex="0" aria-pressed="true" aria-label="Line chart"><i class="fas fa-chart-line"></i></button>
-                            <button type="button" class="control-pill" data-chart-type="bar" role="button" tabindex="0" aria-pressed="false" aria-label="Bar chart"><i class="fas fa-chart-column"></i></button>
-                        </div>
-                    </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="chart-wrapper" style="height:320px;">
-                        <canvas id="incomeExpenseChart"></canvas>
-                    </div>
-                    <div class="d-flex flex-wrap gap-4 mt-4">
-                        <div>
-                            <span class="text-muted text-uppercase small fw-semibold">Income (this month)</span>
-                            <p class="mb-0 fw-semibold fs-5 text-success">${{ number_format(data_get($totalsDisplay['monthly'] ?? [], 'income', 0), 2) }}</p>
-                        </div>
-                        <div>
-                            <span class="text-muted text-uppercase small fw-semibold">Expense (this month)</span>
-                            <p class="mb-0 fw-semibold fs-5 text-danger">${{ number_format(data_get($totalsDisplay['monthly'] ?? [], 'expense', 0), 2) }}</p>
-                        </div>
-                        <div>
-                            <span class="text-muted text-uppercase small fw-semibold">Transactions (this month)</span>
-                            <p class="mb-0 fw-semibold fs-5">{{ number_format(data_get($totalsDisplay['monthly'] ?? [], 'transactions', 0)) }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-lg-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">{{ ucfirst($filters['category_type'] ?? 'expense') }} Breakdown</h5>
-                    <span class="text-muted small">Top categories</span>
-                </div>
-                <div class="card-body">
-                    @if(!empty($chartData['category']['labels']))
-                        <canvas id="expenseCategoryChart" height="260"></canvas>
-                    @else
-                        <p class="text-muted text-center mb-0">Add {{ ucfirst($filters['category_type'] ?? 'expense') }} transactions to see category insights.</p>
-                    @endif
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card">
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0 recent-transactions-card rounded-4 overflow-hidden">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Recent Transactions</h5>
-                    <a href="{{ route('user.transactions') }}" class="btn btn-sm btn-light">View All</a>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge rounded-pill bg-white bg-opacity-10">
+                            <i class="fas fa-receipt me-1"></i> Recent
+                        </span>
+                        <div class="d-flex flex-column">
+                            <h5 class="mb-0">Recent Transactions</h5>
+                            <small class="text-white-50">Quick view of your latest activity</small>
+                        </div>
+                    </div>
+                    <a href="{{ route('user.transactions') }}" class="btn btn-sm btn-light rounded-pill px-3">View All</a>
                 </div>
-                <div class="p-3 d-flex flex-wrap gap-2 align-items-center">
+                <div class="p-3 d-flex flex-wrap gap-2 align-items-center transactions-toolbar">
                     <div class="input-group input-group-sm me-2" style="max-width:360px;">
-                        <span class="input-group-text" id="search-addon"><i class="fas fa-search"></i></span>
-                        <input id="tx-search" type="search" class="form-control" placeholder="Search transactions (desc, category, type)" aria-label="Search transactions" aria-describedby="search-addon">
+                        <span class="input-group-text bg-transparent border-end-0" id="search-addon"><i class="fas fa-search text-muted"></i></span>
+                        <input id="tx-search" type="search" class="form-control border-start-0" placeholder="Search transactions (desc, category, type)" aria-label="Search transactions" aria-describedby="search-addon">
                     </div>
                     <div class="ms-auto d-flex align-items-center gap-2">
                         <label for="tx-per-page" class="small text-muted mb-0">Show</label>
@@ -334,8 +381,8 @@
                         </select>
                     </div>
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
+                <div class="table-responsive recent-transactions-scroll">
+                    <table class="table table-hover table-borderless align-middle mb-0 recent-transactions-table">
                         <thead>
                             <tr>
                                 <th>Type</th>
@@ -753,6 +800,208 @@
 
 @push('styles')
 <style>
+    .dashboard-shell {
+        background: radial-gradient(circle at top left, rgba(14,165,233,0.12), transparent 55%),
+                    radial-gradient(circle at bottom right, rgba(20,184,166,0.10), transparent 55%);
+        border-radius: 1.75rem;
+        padding-top: 1.25rem;
+        padding-bottom: 2rem;
+        margin-bottom: 1.5rem;
+        color: inherit;
+    }
+
+    .dashboard-shell > .row {
+        margin-bottom: 0;
+    }
+
+    .dashboard-shell > .row:last-child {
+        margin-bottom: 0;
+    }
+
+    .text-gradient {
+        background: linear-gradient(90deg, #14b8a6, #0ea5e9);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    .bg-gradient-primary-soft {
+        background: linear-gradient(135deg, rgba(20,184,166,0.18), rgba(14,165,233,0.25));
+        color: #0f172a;
+    }
+
+    .metric-card .card-body {
+        border-radius: 1.25rem;
+        background: radial-gradient(circle at top left, rgba(148,163,184,0.20), transparent 55%);
+    }
+
+    .metric-card {
+        border-radius: 1.5rem;
+    }
+
+    .quick-actions-card {
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        background: linear-gradient(145deg, rgba(15,23,42,0.98), rgba(15,23,42,0.96));
+        box-shadow: 0 24px 60px rgba(15,23,42,0.65);
+        color: #e5e7eb;
+    }
+
+    body.theme-light .quick-actions-card {
+        background: #ffffff;
+        color: #020617;
+        box-shadow: 0 18px 40px rgba(15,23,42,0.12);
+    }
+
+    .quick-actions-header {
+        background: linear-gradient(135deg, #14b8a6, #0ea5e9);
+    }
+
+    .quick-actions-card .text-muted {
+        color: #9ca3af !important;
+    }
+
+    .btn-soft-primary {
+        border-color: rgba(59,130,246,0.35);
+        background-color: rgba(37,99,235,0.03);
+    }
+
+    .btn-soft-primary:hover {
+        background-color: rgba(37,99,235,0.06);
+    }
+
+    .health-pill {
+        background: rgba(15,23,42,0.9) !important;
+        border-color: rgba(148,163,184,0.45) !important;
+        color: #e5e7eb;
+        gap: .35rem;
+    }
+
+    body.theme-light .health-pill {
+        background: rgba(248,250,252,0.95) !important;
+        border-color: rgba(148,163,184,0.35) !important;
+        color: #020617 !important;
+    }
+
+    .card.shadow-sm, .card.shadow-lg {
+        border-radius: 1.5rem;
+        border-color: rgba(148,163,184,0.18) !important;
+        margin-bottom: 1.25rem;
+    }
+
+    .summary-strip {
+        border-radius: 999px;
+        padding: .55rem 1.25rem;
+        background: radial-gradient(circle at top left, rgba(15,23,42,0.9), rgba(15,23,42,0.7));
+        border: 1px solid rgba(148,163,184,0.55);
+        box-shadow: 0 18px 40px rgba(15,23,42,0.4);
+        color: #e5e7eb;
+    }
+
+    body.theme-light .summary-strip {
+        background: rgba(248,250,252,0.95);
+        border-color: rgba(148,163,184,0.35);
+        box-shadow: 0 14px 30px rgba(15,23,42,0.12);
+        color: #020617;
+    }
+
+    .summary-chip {
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+        font-size: .78rem;
+    }
+
+    .summary-chip-label {
+        opacity: .75;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+    }
+
+    .summary-chip-value {
+        font-weight: 600;
+        font-size: .9rem;
+    }
+
+    .spending-header {
+        background: transparent;
+    }
+
+    body.theme-light .spending-header {
+        background: #ffffff;
+    }
+
+    .spending-insight-card {
+        background: rgba(15,23,42,0.9);
+        border-color: rgba(148,163,184,0.6);
+        color: #e5e7eb;
+    }
+
+    body.theme-light .spending-insight-card {
+        background: #f9fafb;
+        border-color: rgba(148,163,184,0.35);
+        color: #020617;
+    }
+
+    .recent-transactions-card {
+        box-shadow: 0 18px 40px rgba(15,23,42,0.35);
+    }
+
+    body.theme-light .recent-transactions-card {
+        box-shadow: 0 14px 26px rgba(15,23,42,0.10);
+    }
+
+    .transactions-toolbar {
+        border-top: 1px solid rgba(148,163,184,0.35);
+        border-bottom: 1px solid rgba(148,163,184,0.18);
+        border-radius: 0;
+        background: rgba(15,23,42,0.85);
+    }
+
+    body.theme-light .transactions-toolbar {
+        background: rgba(248,250,252,0.96);
+    }
+
+    .recent-transactions-table tbody tr.transaction-row:hover {
+        background: rgba(15,23,42,0.08);
+    }
+
+    body.theme-light .recent-transactions-table tbody tr.transaction-row:hover {
+        background: rgba(15,23,42,0.03);
+    }
+
+    .recent-transactions-scroll {
+        max-height: 460px;
+        overflow-y: auto;
+        background: rgba(15,23,42,0.98);
+    }
+
+    body.theme-light .recent-transactions-scroll {
+        background: #ffffff;
+    }
+
+    .recent-transactions-table thead th {
+        border-bottom-color: rgba(148,163,184,0.35);
+        font-size: .75rem;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: #9ca3af;
+    }
+
+    body.theme-light .recent-transactions-table thead th {
+        color: #6b7280;
+    }
+
+    .recent-transactions-table tbody tr {
+        background-color: transparent;
+        border-color: rgba(148,163,184,0.32);
+    }
+
+    body.theme-light .recent-transactions-table tbody tr {
+        background-color: #ffffff;
+        border-color: rgba(148,163,184,0.16);
+    }
+
     .control-pill:focus { outline: 3px solid rgba(59,130,246,0.25); outline-offset: 2px; }
     .control-pill.disabled { opacity: .5; pointer-events: none; }
 </style>
