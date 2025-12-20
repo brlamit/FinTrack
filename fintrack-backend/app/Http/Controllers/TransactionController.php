@@ -70,129 +70,144 @@ class TransactionController extends Controller
     /**
      * Store a newly created transaction.
      */
-    public function store(Request $request): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'category_id' => 'required|exists:categories,id',
-            'amount' => 'nullable|required_without:receipt_id|numeric|min:0.01|max:999999.99',
-            'description' => 'nullable|string|max:255',
-            'transaction_date' => 'required|date|before_or_equal:today',
-            'type' => 'required|in:income,expense',
-            'receipt_id' => 'nullable|exists:receipts,id',
-            'tags' => 'nullable|array',
-            'tags.*' => 'string|max:50',
-            'is_recurring' => 'boolean',
-            'recurring_frequency' => 'nullable|required_if:is_recurring,true|in:daily,weekly,monthly,yearly',
-            'recurring_end_date' => 'nullable|date|after:transaction_date',
+  public function store(Request $request): JsonResponse
+{
+    $validator = Validator::make($request->all(), [
+        'category_id' => 'required|exists:categories,id',
+        'amount' => 'nullable|required_without:receipt_id|numeric|min:0.01|max:999999.99',
+        'description' => 'nullable|string|max:255',
+        'transaction_date' => 'required|date|before_or_equal:today',
+        'type' => 'required|in:income,expense',
+        'receipt_id' => 'nullable|exists:receipts,id',
+        'tags' => 'nullable|array',
+        'tags.*' => 'string|max:50',
+        'is_recurring' => 'boolean',
+        'recurring_frequency' => 'nullable|required_if:is_recurring,true|in:daily,weekly,monthly,yearly',
+        'recurring_end_date' => 'nullable|date|after:transaction_date',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation failed',
+            'errors' => $validator->errors(),
+        ], 422);
+    }
+
+    // Verify category
+    $category = Category::where('id', $request->category_id)
+        ->where(function ($query) {
+            $query->where('user_id', auth()->id())
+                  ->orWhereNull('user_id');
+        })
+        ->first();
+
+    if (!$category) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Invalid category',
+        ], 422);
+    }
+
+    // Verify receipt if provided
+   // Verify receipt belongs to user if provided
+// Verify receipt belongs to user if provided
+$receipt = null;
+if ($request->receipt_id) {
+    $receipt = auth()->user()->receipts()->find($request->receipt_id);
+    if (!$receipt) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Invalid receipt',
+        ], 422);
+    }
+
+    // If the receipt is still being processed, block transaction creation
+    if (!$receipt->processed) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Receipt is still being processed. Please wait a moment and try again.',
+        ], 409);
+    }
+
+    // Ensure parsed_data has a valid estimated_total
+    $parsed = $receipt->parsed_data ?? [];
+    $estimatedTotal = $parsed['estimated_total'] ?? null;
+
+    if ($estimatedTotal === null && !$request->has('amount')) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Receipt OCR did not extract a valid total. Please enter an amount manually.',
+            'errors' => [
+                'amount' => ['Amount is required or must be derivable from the attached receipt.'],
+            ],
+        ], 422);
+    }
+}
+
+
+    // Determine amount
+    $amount = $request->input('amount');
+    $numericAmount = $amount !== null && $amount !== ''
+        ? (float) $amount
+        : 0.0;
+
+    if ($numericAmount <= 0.0 && $receipt) {
+        $parsed = $receipt->parsed_data ?? [];
+        $estimatedTotal = $parsed['estimated_total'] ?? 0.0;
+        if ($estimatedTotal > 0.0) {
+            $numericAmount = $estimatedTotal;
+        }
+    }
+
+    if ($numericAmount <= 0.0) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Amount is required when a valid total cannot be read from the receipt.',
+            'errors' => [
+                'amount' => ['Amount is required or must be derivable from the attached receipt.'],
+            ],
+        ], 422);
+    }
+
+    // Create transaction
+    DB::beginTransaction();
+    try {
+        $transaction = Transaction::create([
+            'user_id' => auth()->id(),
+            'category_id' => $request->category_id,
+            'amount' => $numericAmount,
+            'description' => $request->description,
+            'transaction_date' => $request->transaction_date,
+            'type' => $request->type,
+            'receipt_id' => $request->receipt_id,
+            'tags' => $request->tags,
+            'is_recurring' => $request->is_recurring ?? false,
+            'recurring_frequency' => $request->recurring_frequency,
+            'recurring_end_date' => $request->recurring_end_date,
+            'synced_to_supabase' => false,
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
+        DB::commit();
 
-        // Verify category belongs to user or is system category
-        $category = Category::where('id', $request->category_id)
-            ->where(function ($query) {
-                $query->where('user_id', auth()->id())
-                      ->orWhereNull('user_id');
-            })
-            ->first();
-
-        if (!$category) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid category',
-            ], 422);
-        }
-
-        // Verify receipt belongs to user if provided
-        $receipt = null;
-        if ($request->receipt_id) {
-            $receipt = auth()->user()->receipts()->find($request->receipt_id);
-            if (!$receipt) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid receipt',
-                ], 422);
-            }
-        }
-
-        // If amount is missing or zero but we have a receipt, try to
-        // default the amount from the OCR-parsed estimated_total.
-        $amount = $request->input('amount');
-        $numericAmount = $amount !== null && $amount !== ''
-            ? (float) $amount
-            : 0.0;
-
-        if ($numericAmount <= 0.0 && $receipt) {
-            $receipt->refresh();
-            $parsed = $receipt->parsed_data ?? [];
-            $estimatedTotal = is_array($parsed) && array_key_exists('estimated_total', $parsed)
-                ? (float) ($parsed['estimated_total'] ?? 0)
-                : 0.0;
-
-            if ($estimatedTotal > 0.0) {
-                $numericAmount = $estimatedTotal;
-            }
-        }
-
-        if ($numericAmount <= 0.0) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Amount is required when a valid total cannot be read from the receipt.',
-                'errors' => [
-                    'amount' => ['Amount is required or must be derivable from the attached receipt.'],
-                ],
-            ], 422);
-        }
-
-       
-      DB::beginTransaction();
-        try {
-            $transaction = Transaction::create([
-                'user_id' => auth()->id(),
-                'category_id' => $request->category_id,
-                'amount' => $numericAmount,
-                'description' => $request->description,
-                'transaction_date' => $request->transaction_date,
-                'type' => $request->type,
-                'receipt_id' => $request->receipt_id,
-                'tags' => $request->tags,
-                'is_recurring' => $request->is_recurring ?? false,
-                'recurring_frequency' => $request->recurring_frequency,
-                'recurring_end_date' => $request->recurring_end_date,
-                'synced_to_supabase' => false, // 👈 important
-            ]);
-
-            DB::commit();
-
-    // 🚀 Background sync (ASYNC)
-        SyncTransactionToSupabase::dispatch($transaction);
+        // Sync to Supabase in background (optional)
+        // SyncTransactionToSupabase::dispatch($transaction);
 
         return response()->json([
             'success' => true,
             'message' => 'Transaction created successfully',
             'data' => $transaction->load(['category', 'receipt']),
-            ], 201);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-
-        logger()->error('Transaction store failed', [
-            'error' => $e->getMessage()
-        ]);
+        ], 201);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        logger()->error('Transaction store failed', ['error' => $e->getMessage()]);
 
         return response()->json([
             'success' => false,
             'message' => 'Failed to create transaction',
         ], 500);
     }
-
-    }
+}
 
     /**
      * Display the specified transaction.

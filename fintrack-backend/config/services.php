@@ -34,5 +34,15 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+'ocr_space' => [
+    'key' => env('OCR_SPACE_API_KEY'),
+],
+
+'freeocr' => [
+    'key' => env('FREEOCR_API_KEY'),
+    'host' => env('FREEOCR_API_HOST'),
+],
+
+
 
 ];
