@@ -174,7 +174,7 @@ public function dashboard(Request $request)
     $recentTransactions = Transaction::query()
         ->where('user_id', $user->id)
         ->whereNull('group_id')
-        ->with('category')
+        ->with(['category', 'receipt'])
         ->orderByRaw('COALESCE(transaction_date, created_at) DESC')
         ->limit(5)
         ->get()
@@ -188,6 +188,8 @@ public function dashboard(Request $request)
                 'display_amount' => $formatCurrency((float) ($transaction->amount ?? 0)),
                 'display_date' => $transactionDate?->format('M d, Y'),
                 'is_income' => $transaction->type === 'income',
+                // Use the accessor so this is a fully resolved, public URL when possible
+                'receipt_path' => $transaction->receipt_path,
             ];
         });
 
@@ -1264,7 +1266,7 @@ public function dashboard(Request $request)
         $perPage = (int) max(5, min($request->input('per_page', 15), 100));
 
         $transactions = $transactionsQuery
-            ->with('category')
+            ->with(['category', 'receipt'])
             ->orderByRaw('COALESCE(transaction_date, created_at) DESC')
             ->paginate($perPage)
             ->withQueryString();
@@ -1281,6 +1283,8 @@ public function dashboard(Request $request)
                     'display_amount' => $formatCurrency((float) ($transaction->amount ?? 0)),
                     'display_date' => $transactionDate?->format('M d, Y'),
                     'is_income' => $transaction->type === 'income',
+                    // Fully resolved URL (or null) via accessor
+                    'receipt_path' => $transaction->receipt_path,
                 ];
             });
 

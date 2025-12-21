@@ -6,16 +6,27 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'FinTrack')</title>
 
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <!-- Bootstrap 5.3 (latest stable) + Font Awesome -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
     <style>
+        /* Dark mode layout: match welcome page hero-style colors */
         body.user-theme {
-            background: radial-gradient(circle at top left, rgba(15,23,42,1), rgba(15,23,42,0.98));
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(20,184,166,0.15), transparent 50%),
+                radial-gradient(circle at bottom right, rgba(14,165,233,0.15), transparent 50%),
+                #020617;
             color: #e5e7eb;
         }
 
+        /* Light mode layout */
         body.user-theme.theme-light {
             background: #f8fafc;
             color: #020617;
@@ -26,6 +37,7 @@
             backdrop-filter: blur(18px);
             -webkit-backdrop-filter: blur(18px);
             border-bottom: 1px solid rgba(148,163,184,0.45);
+            z-index: 1080; /* keep navbar + dropdowns above page content */
         }
 
         body.user-theme.theme-light .navbar.fintrack-navbar {
@@ -62,21 +74,29 @@
         body.user-theme .dropdown-menu {
             background-color: #020617;
             border-color: rgba(30,64,175,0.6);
+            z-index: 1070; /* ensure it appears above dashboard/cards */
         }
 
-        body.user-theme .dropdown-menu .dropdown-item,
-        body.user-theme .dropdown-menu .dropdown-item i {
+        /* Dark mode dropdown text */
+        body.user-theme:not(.theme-light) .dropdown-menu .dropdown-item,
+        body.user-theme:not(.theme-light) .dropdown-menu .dropdown-item i {
             color: #e5e7eb;
         }
 
-        body.user-theme .dropdown-menu .dropdown-item:hover,
-        body.user-theme .dropdown-menu .dropdown-item:focus {
+        body.user-theme:not(.theme-light) .dropdown-menu .dropdown-item:hover,
+        body.user-theme:not(.theme-light) .dropdown-menu .dropdown-item:focus {
             background-color: rgba(15,23,42,0.9);
         }
 
+        /* Light mode dropdown */
         body.user-theme.theme-light .dropdown-menu {
             background-color: #ffffff;
             border-color: rgba(148,163,184,0.35);
+        }
+
+        body.user-theme.theme-light .dropdown-menu .dropdown-item,
+        body.user-theme.theme-light .dropdown-menu .dropdown-item i {
+            color: #020617;
         }
 
         /* Card base colors so dashboard content is readable but still Bootstrap-like */
@@ -187,7 +207,7 @@
                         </button>
                     </li>
                     <!-- Notifications Dropdown -->
-                    <li class="nav-item dropdown me-3">
+                    <li class="nav-item dropdown me-3 position-relative ">
                         @php
                             $unreadCount = auth()->check() ? \App\Models\Notification::where('user_id', auth()->id())->where('is_read', false)->count() : 0;
                             $recentNotifications = auth()->check()

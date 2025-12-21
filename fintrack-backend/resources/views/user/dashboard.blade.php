@@ -93,16 +93,16 @@
                     <h5 class="mb-0">Quick Actions</h5>
                 </div>
                 <div class="card-body d-flex flex-column gap-2">
-                    <a href="{{ route('user.transactions.create') }}" class="btn btn-primary w-100 rounded-pill shadow-sm">
+                    <a href="{{ route('user.transactions.create') }}" class="btn btn-primary quick-actions-btn-primary w-100 rounded-pill shadow-sm">
                         <i class="fas fa-plus-circle me-1"></i> Add Transaction
                     </a>
-                    <a href="{{ route('user.budgets') }}" class="btn btn-outline-primary w-100 rounded-pill btn-soft-primary">
+                    <a href="{{ route('user.budgets') }}" class="btn quick-actions-btn-secondary w-100 rounded-pill">
                         <i class="fas fa-chart-pie me-1"></i> Manage Budgets
                     </a>
-                    <a href="{{ route('user.groups') }}" class="btn btn-outline-primary w-100 rounded-pill btn-soft-primary">
+                    <a href="{{ route('user.groups') }}" class="btn quick-actions-btn-secondary w-100 rounded-pill">
                         <i class="fas fa-users me-1"></i> My Groups
                     </a>
-                    <a href="{{ route('user.reports') }}" class="btn btn-outline-primary w-100 rounded-pill btn-soft-primary">
+                    <a href="{{ route('user.reports') }}" class="btn quick-actions-btn-secondary w-100 rounded-pill">
                         <i class="fas fa-file-alt me-1"></i> View Reports
                     </a>
                 </div>
@@ -388,6 +388,7 @@
                                 <th>Type</th>
                                 <th>Description</th>
                                 <th>Category</th>
+                                <th>Receipt</th>
                                 <th>Amount</th>
                                 <th>Date</th>
                             </tr>
@@ -396,6 +397,7 @@
                             @forelse($recentTransactions ?? [] as $transaction)
                                 @php
                                     $isIncome = data_get($transaction, 'is_income', false);
+                                    $imgUrl = data_get($transaction, 'receipt_path');
                                 @endphp
                                 <tr class="transaction-row">
                                     <td>
@@ -408,13 +410,20 @@
                                         @endif
                                     </td>
                                     <td>
+                                        @if(!empty($imgUrl))
+                                            <img src="{{ $imgUrl }}" width="80" height="60" style="object-fit: cover; border-radius: 4px;" alt="{{ data_get($transaction, 'description', 'Receipt Image') }}">
+                                        @else
+                                            <span class="text-muted small">No Image</span>
+                                        @endif
+                                    </td>
+                                    <td>
                                         <strong class="{{ $isIncome ? 'text-success' : 'text-danger' }}">{{ data_get($transaction, 'display_amount', '$0.00') }}</strong>
                                     </td>
                                     <td>{{ data_get($transaction, 'display_date', '—') }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted py-4">
+                                    <td colspan="6" class="text-center text-muted py-4">
                                         No transactions yet. Start tracking your expenses!
                                     </td>
                                 </tr>
@@ -754,18 +763,26 @@
         const renderTransactions = (items) => {
             if (!txTbody) return;
             if (!items || items.length === 0) {
-                txTbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">No transactions yet. Start tracking your expenses!</td></tr>`;
+                txTbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">No transactions yet. Start tracking your expenses!</td></tr>`;
                 return;
             }
-            txTbody.innerHTML = items.map(t => `
+            txTbody.innerHTML = items.map(t => {
+                const hasImg = !!t.receipt_path;
+                const imgCell = hasImg
+                    ? `<img src="${escapeHtml(t.receipt_path)}" width="80" height="60" style="object-fit: cover; border-radius: 4px;" alt="${escapeHtml(t.description || 'Receipt Image')}">`
+                    : '<span class="text-muted small">No Image</span>';
+
+                return `
                 <tr class="transaction-row">
                     <td><span class="badge ${t.is_income ? 'bg-success' : 'bg-danger'} text-uppercase">${t.type}</span></td>
                     <td>${escapeHtml(t.description || '—')}</td>
                     <td>${t.category_name ? `<span class="badge bg-secondary">${escapeHtml(t.category_name)}</span>` : ''}</td>
+                    <td>${imgCell}</td>
                     <td><strong class="${t.is_income ? 'text-success' : 'text-danger'}">${escapeHtml(t.display_amount)}</strong></td>
                     <td>${escapeHtml(t.display_date || '—')}</td>
                 </tr>
-            `).join('');
+                `;
+            }).join('');
         };
 
         // small debounce
@@ -801,13 +818,31 @@
 @push('styles')
 <style>
     .dashboard-shell {
-        background: radial-gradient(circle at top left, rgba(14,165,233,0.12), transparent 55%),
-                    radial-gradient(circle at bottom right, rgba(20,184,166,0.10), transparent 55%);
         border-radius: 1.75rem;
         padding-top: 1.25rem;
         padding-bottom: 2rem;
         margin-bottom: 1.5rem;
         color: inherit;
+    }
+
+    /* Dark mode: keep page light, but make dashboard shell dark */
+    body.user-theme:not(.theme-light) .dashboard-shell {
+        background:
+            radial-gradient(circle at top left, rgba(20,184,166,0.18), transparent 55%),
+            radial-gradient(circle at bottom right, rgba(14,165,233,0.20), transparent 55%),
+            rgba(15,23,42,0.98);
+        color: #e5e7eb;
+        box-shadow: 0 24px 60px rgba(15,23,42,0.65);
+    }
+
+    /* Light mode: everything, including shell, stays light */
+    body.theme-light .dashboard-shell {
+        background:
+            radial-gradient(circle at top left, rgba(59,130,246,0.06), transparent 55%),
+            radial-gradient(circle at bottom right, rgba(45,212,191,0.05), transparent 55%),
+            rgba(248,250,252,0.96);
+        color: #020617;
+        box-shadow: 0 18px 40px rgba(15,23,42,0.12);
     }
 
     .dashboard-shell > .row {
@@ -819,7 +854,7 @@
     }
 
     .text-gradient {
-        background: linear-gradient(90deg, #14b8a6, #0ea5e9);
+        background: linear-gradient(90deg, #14b8a6, #0ea5e9, #10b981);
         -webkit-background-clip: text;
         background-clip: text;
         color: transparent;
@@ -842,15 +877,57 @@
     .quick-actions-card {
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
-        background: linear-gradient(145deg, rgba(15,23,42,0.98), rgba(15,23,42,0.96));
-        box-shadow: 0 24px 60px rgba(15,23,42,0.65);
+        background:
+            radial-gradient(circle at top left, rgba(56,189,248,0.22), transparent 55%),
+            radial-gradient(circle at bottom right, rgba(45,212,191,0.22), transparent 55%),
+            rgba(15,23,42,0.98);
+        box-shadow: 0 24px 60px rgba(15,23,42,0.7);
         color: #e5e7eb;
     }
 
     body.theme-light .quick-actions-card {
-        background: #ffffff;
+        background: linear-gradient(135deg, rgba(59,130,246,0.06), rgba(45,212,191,0.04));
         color: #020617;
         box-shadow: 0 18px 40px rgba(15,23,42,0.12);
+    }
+
+    .quick-actions-btn-primary {
+        background: linear-gradient(135deg, #14b8a6, #0ea5e9);
+        border: none;
+        box-shadow: 0 12px 30px rgba(15,23,42,0.4);
+    }
+
+    .quick-actions-btn-primary:hover {
+        background: linear-gradient(135deg, #0f766e, #0284c7);
+        box-shadow: 0 16px 36px rgba(15,23,42,0.55);
+    }
+
+    body.theme-light .quick-actions-btn-primary {
+        box-shadow: 0 10px 24px rgba(15,23,42,0.18);
+    }
+
+    .quick-actions-btn-secondary {
+        border: 1px solid rgba(148,163,184,0.5);
+        background-color: rgba(15,23,42,0.6);
+        color: #e5e7eb;
+    }
+
+    .quick-actions-btn-secondary:hover {
+        background-color: rgba(15,23,42,0.8);
+        border-color: rgba(148,163,184,0.8);
+        color: #f9fafb;
+    }
+
+    body.theme-light .quick-actions-btn-secondary {
+        background-color: rgba(248,250,252,0.98);
+        border-color: rgba(148,163,184,0.5);
+        color: #0f172a;
+    }
+
+    body.theme-light .quick-actions-btn-secondary:hover {
+        background-color: rgba(59,130,246,0.06);
+        border-color: rgba(59,130,246,0.75);
+        color: #1d4ed8;
     }
 
     .quick-actions-header {
@@ -868,6 +945,41 @@
 
     .btn-soft-primary:hover {
         background-color: rgba(37,99,235,0.06);
+    }
+
+    .dashboard-shell .btn-primary {
+        background: linear-gradient(135deg, #14b8a6, #0ea5e9);
+        border: none;
+        box-shadow: 0 12px 30px rgba(15,23,42,0.35);
+    }
+
+    .dashboard-shell .btn-primary:hover {
+        background: linear-gradient(135deg, #0f766e, #0284c7);
+        box-shadow: 0 16px 36px rgba(15,23,42,0.45);
+    }
+
+    body.theme-light .dashboard-shell .btn-primary {
+        box-shadow: 0 10px 24px rgba(15,23,42,0.18);
+    }
+
+    .dashboard-shell .btn-outline-primary {
+        border-color: rgba(59,130,246,0.65);
+        color: #e5e7eb;
+    }
+
+    .dashboard-shell .btn-outline-primary:hover {
+        background-color: rgba(37,99,235,0.12);
+        color: #e5e7eb;
+    }
+
+    body.theme-light .dashboard-shell .btn-outline-primary {
+        color: #1d4ed8;
+        border-color: rgba(59,130,246,0.65);
+    }
+
+    body.theme-light .dashboard-shell .btn-outline-primary:hover {
+        background-color: rgba(59,130,246,0.08);
+        color: #1d4ed8;
     }
 
     .health-pill {
