@@ -109,8 +109,6 @@ class TransactionController extends Controller
         ], 422);
     }
 
-    // Verify receipt if provided
-   // Verify receipt belongs to user if provided
 // Verify receipt belongs to user if provided
 $receipt = null;
 if ($request->receipt_id) {
@@ -160,7 +158,7 @@ if ($request->receipt_id) {
         }
     }
 
-    if ($numericAmount <= 0.0) {
+    if ($numericAmount <= 0.0 && empty($receipt?->parsed_data['requires_manual_amount'])) {
         return response()->json([
             'success' => false,
             'message' => 'Amount is required when a valid total cannot be read from the receipt.',

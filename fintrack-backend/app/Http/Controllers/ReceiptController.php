@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Receipt;
+use App\Services\ReceiptOcrService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
@@ -11,6 +12,9 @@ use Illuminate\Support\Str;
 
 class ReceiptController extends Controller
 {
+    public function __construct(private readonly ReceiptOcrService $receiptOcrService)
+    {
+    }
     /**
      * Display a listing of the user's receipts.
      */
@@ -97,6 +101,88 @@ class ReceiptController extends Controller
     }
 
     /**
+     * Directly upload a receipt file (for mobile clients) and run OCR.
+     */
+    public function uploadDirect(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'receipt' => 'required|file|image|max:5120', // 5MB
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $file = $request->file('receipt');
+
+        // Store on configured disk (falling back to default/public when necessary)
+        $disk = env('FILESYSTEM_DISK', config('filesystems.default'));
+        $disks = array_keys(config('filesystems.disks', []));
+        if (!in_array($disk, $disks, true)) {
+            $disk = config('filesystems.default');
+            if (!in_array($disk, $disks, true)) {
+                $disk = 'public';
+            }
+        }
+
+        $filename = time() . '_' . $file->getClientOriginalName();
+        $path = $file->storeAs('receipts/' . auth()->id(), $filename, $disk);
+
+        // Build a public URL (or best-effort path) similar to group/personal flows
+        $pathToSave = $path;
+        $generated = null;
+        try {
+            $generated = Storage::disk($disk)->url($path);
+        } catch (\Throwable $e) {
+            $generated = null;
+        }
+
+        $diskConfig = config("filesystems.disks.{$disk}", []);
+        $diskUrl = $diskConfig['url'] ?? null;
+        $bucket = $diskConfig['bucket'] ?? env('SUPABASE_PUBLIC_BUCKET');
+
+        if (!empty($generated) && !empty($bucket) && strpos($generated, trim($bucket, '/')) === false) {
+            $generated = null;
+        }
+
+        if (empty($generated) && !empty($diskUrl)) {
+            $encodedKey = implode('/', array_map('rawurlencode', explode('/', $path)));
+            if (!empty($bucket)) {
+                $generated = rtrim($diskUrl, '/') . '/' . trim($bucket, '/') . '/' . ltrim($encodedKey, '/');
+            } else {
+                $generated = rtrim($diskUrl, '/') . '/' . ltrim($encodedKey, '/');
+            }
+        }
+
+        if (!empty($generated)) {
+            $pathToSave = $generated;
+        }
+
+        $receipt = Receipt::create([
+            'user_id' => auth()->id(),
+            'filename' => $filename,
+            'original_filename' => $file->getClientOriginalName(),
+            'mime_type' => $file->getClientMimeType(),
+            'path' => $pathToSave,
+            'size' => $file->getSize(),
+            'processed' => false,
+        ]);
+
+        // Run OCR so parsed JSON (including estimated_total) is available immediately
+        $this->receiptOcrService->process($receipt);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Receipt uploaded successfully',
+            'data' => $receipt,
+        ], 201);
+    }
+
+    /**
      * Complete receipt upload and create receipt record.
      */
     public function complete(Request $request): JsonResponse
@@ -176,8 +262,8 @@ class ReceiptController extends Controller
             'processed' => false,
         ]);
 
-        // TODO: Queue OCR processing job
-        // ProcessReceipt::dispatch($receipt);
+        // Perform OCR synchronously so that JSON data is available
+        $this->receiptOcrService->process($receipt);
 
         return response()->json([
             'success' => true,
@@ -202,6 +288,34 @@ class ReceiptController extends Controller
         return response()->json([
             'success' => true,
             'data' => $receipt,
+        ]);
+    }
+
+    /**
+     * Return parsed OCR data for a receipt, including estimated total.
+     */
+    public function parsed(Receipt $receipt): JsonResponse
+    {
+        if ($receipt->user_id !== auth()->id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Receipt not found',
+            ], 404);
+        }
+
+        $parsed = $receipt->parsed_data ?? [];
+        $ocr = $receipt->ocr_data ?? null;
+        $estimatedTotal = is_array($parsed) && array_key_exists('estimated_total', $parsed)
+            ? $parsed['estimated_total']
+            : null;
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'estimated_total' => $estimatedTotal,
+                'parsed_data' => $parsed,
+                'ocr_data' => $ocr,
+            ],
         ]);
     }
 
