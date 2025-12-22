@@ -806,9 +806,9 @@ public function dashboard(Request $request)
     }
 
     /**
-     * Update user profile
+     * Update user profile (web form)
      */
-  public function update(Request $request)
+    public function update(Request $request)
     {
         $user = auth()->user();
 
@@ -834,6 +834,39 @@ public function dashboard(Request $request)
 
         return redirect()->route('user.profile')
             ->with('success', 'Profile updated successfully!');
+    }
+
+    /**
+     * API: Update profile (name/phone + optional avatar) for mobile clients
+     */
+    public function updateProfileApi(Request $request)
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'name'   => ['sometimes', 'string', 'max:255'],
+            'phone'  => ['sometimes', 'string', 'max:20'],
+            'avatar' => ['sometimes', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:8192'],
+        ]);
+
+        // If avatar is present, handle it via shared helper and
+        // remove from validated data so we don't overwrite the DB value.
+        if ($request->hasFile('avatar')) {
+            $this->uploadAvatar($request->file('avatar'), $user);
+            unset($validated['avatar']);
+        }
+
+        if (!empty($validated)) {
+            $user->update($validated);
+        }
+
+        $fresh = $user->fresh();
+
+        return response()->json([
+            'success'    => true,
+            'user'       => $fresh,
+            'avatar_url' => $fresh->avatar,
+        ]);
     }
 
     /**

@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class GroupController extends Controller
 {
@@ -246,6 +247,33 @@ class GroupController extends Controller
         return response()->json([
             'success' => true,
             'data' => $members,
+        ]);
+    }
+
+    /**
+     * Get group transactions as JSON for API consumers.
+     */
+    public function transactions(Request $request, Group $group): JsonResponse
+    {
+        // Check if user is member of the group
+        if (! $group->members()->where('user_id', $request->user()->id)->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Group not found',
+            ], 404);
+        }
+
+        $transactions = $group->sharedTransactions()
+            ->with(['user', 'category'])
+            ->orderByDesc(DB::raw('COALESCE(transaction_date, created_at)'))
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'group' => $group,
+                'transactions' => $transactions,
+            ],
         ]);
     }
 
