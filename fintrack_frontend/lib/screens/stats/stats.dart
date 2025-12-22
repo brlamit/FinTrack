@@ -2,7 +2,7 @@ import 'package:fintrack_frontend/screens/stats/chart.dart';
 import 'package:flutter/material.dart';
 
 class StatScreen extends StatelessWidget {
-  const StatScreen({super.key});
+  const StatScreen({super.key, required rawDashboard});
 
   @override
   Widget build(BuildContext context) {
