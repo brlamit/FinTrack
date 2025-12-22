@@ -1,146 +1,58 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="transition-colors duration-300">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register - FinTrack</title>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-    <script src="https://cdn.tailwindcss.com"></script>
-
-    <style>
-        :root {
-            --bg-dark: #0a0a0f;
-            --accent-teal: #14b8a6;
-            --accent-sky: #0ea5e9;
-            --accent-emerald: #10b981;
-            --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --card-bg: rgba(30, 30, 40, 0.9);
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg-dark);
-            color: var(--text-primary);
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        .glass {
-            background: var(--card-bg);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 24px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-        }
-
-        .gradient-text {
-            background: linear-gradient(90deg, #14b8a6, #0ea5e9, #10b981);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero-bg {
-            background: radial-gradient(circle at top left, rgba(20, 184, 166, 0.18) 0%, transparent 52%),
-                        radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.18) 0%, transparent 52%);
-        }
-
-        .theme-light {
-            --bg-dark: #f8fafc;
-            --text-primary: #020617;
-            --text-secondary: #475569;
-            --card-bg: rgba(255, 255, 255, 0.96);
-        }
-
-        /* Light mode overrides for better contrast */
-        body.theme-light .glass {
-            border-color: #e2e8f0;
-            box-shadow: 0 18px 30px rgba(15, 23, 42, 0.10);
-        }
-
-        body.theme-light .text-slate-400,
-        body.theme-light .text-slate-500 {
-            color: #64748b;
-        }
-
-        body.theme-light .text-slate-300,
-        body.theme-light .text-slate-200,
-        body.theme-light .text-slate-100 {
-            color: #0f172a;
-        }
-
-        body.theme-light input[type="text"],
-        body.theme-light input[type="password"],
-        body.theme-light input[type="email"] {
-            background-color: #ffffff;
-            border-color: #cbd5e1;
-            color: #020617;
-        }
-
-        body.theme-light input::placeholder {
-            color: #94a3b8;
-        }
-
-        body.theme-light #register-theme-toggle {
-            background-color: #e2e8f0;
-            border-color: #cbd5e1;
-            color: #0f172a;
-        }
-
-        /* Alert visibility tweaks in light mode */
-        body.theme-light .fintrack-alert-success {
-            background-color: #eff6ff; /* sky/blue tinted */
-            border-color: #38bdf8;     /* sky-400 */
-            color: #0369a1;           /* sky-700 */
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register - FinTrack</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class'
+  }
+</script>
 </head>
-<body class="hero-bg min-h-screen flex items-center justify-center px-4 py-10 relative">
+<body class="relative min-h-screen bg-gray-50 transition-colors duration-300">
 
-    <div class="absolute inset-0 pointer-events-none">
-        <div class="absolute top-[-120px] right-[-80px] w-[360px] h-[360px] bg-gradient-to-br from-teal-500/15 to-sky-500/15 blur-3xl rounded-full"></div>
-        <div class="absolute bottom-[-120px] left-[-60px] w-[320px] h-[320px] bg-gradient-to-br from-emerald-500/15 to-sky-500/15 blur-3xl rounded-full"></div>
-    </div>
-
-    <div class="w-full max-w-md mx-auto relative z-10">
-        <header class="mb-8 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <a href="{{ url('/') }}" class="w-10 h-10 rounded-2xl bg-gradient-to-br from-teal-500 to-sky-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                    FT
-                </a>
-                <div>
-                    <h1 class="text-lg font-semibold gradient-text">FinTrack</h1>
-                    <p class="text-xs text-slate-400">Create your free account</p>
-                </div>
+<div class="relative z-10 w-full max-w-md mx-auto px-4 py-10">
+    <!-- Header -->
+    <header class="mb-8 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <a href="/" class="w-10 h-10 rounded-2xl bg-gradient-to-br from-teal-500 to-sky-600 flex items-center justify-center text-white font-bold text-xl shadow-lg animate-bounce">
+                FT
+            </a>
+            <div>
+                <h1 class="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-teal-400 via-sky-400 to-emerald-400">FinTrack</h1>
+                <p class="text-xs text-gray-600">Create your free account</p>
             </div>
+        </div>
 
-            <button id="register-theme-toggle" type="button" class="px-3 py-1.5 rounded-full text-[11px] bg-slate-900/70 border border-slate-700/70 text-slate-200 hover:bg-slate-800/80 transition">
-                Light mode
-            </button>
-        </header>
+        <!-- Theme Toggle -->
+        <button id="register-theme-toggle" class="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm bg-gray-200/80 border border-gray-300 text-gray-900 hover:bg-gray-300/80 transition">
+            <span id="theme-icon">🌞</span>
+            <span id="theme-text">Dark</span>
+        </button>
+    </header>
 
-        <main class="glass p-6 sm:p-7">
-            <div class="mb-6">
-                <h2 class="text-xl font-semibold mb-1">Join FinTrack</h2>
-                <p class="text-xs text-slate-400">Set up your space to track spending, budgets and savings goals.</p>
-            </div>
+    <!-- Register Card -->
+    <main class="transition-colors duration-300 rounded-2xl p-8 shadow-lg
+                 bg-white dark:bg-[rgba(30,30,40,0.7)] backdrop-blur-2xl
+                 border border-white/10 dark:border-white/20">
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold mb-1 bg-clip-text text-transparent bg-gradient-to-r from-teal-400 via-sky-400 to-emerald-400">Join FinTrack</h2>
+            <p class="text-sm text-gray-700 dark:text-gray-300">Set up your space to track spending, budgets, and savings goals.</p>
+        </div>
+        
 
             @if (session('status'))
                 <div class="mb-4 rounded-xl border border-sky-500/40 bg-sky-500/10 px-3 py-2 text-xs text-sky-100 fintrack-alert-success">
                     {{ session('status') }}
                 </div>
             @endif
-
-            <form method="POST" action="{{ route('auth.register.post') }}" class="space-y-4 text-sm">
+        <form method="POST" action="{{ route('auth.register.post') }}" class="space-y-4 text-sm">
                 @csrf
 
                 <div>
-                    <label for="name" class="block mb-1 text-xs font-medium text-slate-300">Full Name</label>
+                     <label for="name" class="block mb-1 text-xs font-medium text-gray-700 dark:text-gray-300">Full Name</label>
                     <input
                         type="text"
                         id="name"
@@ -156,7 +68,7 @@
                 </div>
 
                 <div>
-                    <label for="email" class="block mb-1 text-xs font-medium text-slate-300">Email Address</label>
+                   <label for="email" class="block mb-1 text-xs font-medium text-gray-700 dark:text-gray-300">Email Address</label>
                     <input
                         type="email"
                         id="email"
@@ -172,7 +84,7 @@
                 </div>
 
                 <div>
-                    <label for="password" class="block mb-1 text-xs font-medium text-slate-300">Password</label>
+                    <label for="password" class="block mb-1 text-xs font-medium text-gray-700 dark:text-gray-300">Password</label>
                     <input
                         type="password"
                         id="password"
@@ -184,11 +96,11 @@
                     @error('password')
                         <p class="mt-1 text-[11px] text-red-400">{{ $message }}</p>
                     @enderror
-                    <p class="mt-1 text-[11px] text-slate-500">At least 8 characters with uppercase, lowercase and a number.</p>
+                   <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-300">At least 8 characters with uppercase, lowercase, and a number.</p>
                 </div>
 
                 <div>
-                    <label for="password_confirmation" class="block mb-1 text-xs font-medium text-slate-300">Confirm Password</label>
+                    <label for="password_confirmation" class="block mb-1 text-xs font-medium text-gray-700 dark:text-gray-300">Confirm Password</label>
                     <input
                         type="password"
                         id="password_confirmation"
@@ -206,56 +118,52 @@
                 </div>
             </form>
 
-            <div class="mt-5 flex items-center justify-between gap-3 text-[11px] text-slate-400">
-                <span class="h-px flex-1 bg-slate-700/80"></span>
-                <span>or</span>
-                <span class="h-px flex-1 bg-slate-700/80"></span>
-            </div>
+        <div class="mt-5 flex items-center justify-between gap-3 text-xs text-gray-400 dark:text-gray-500">
+            <span class="h-px flex-1 bg-gray-300/50 dark:bg-white/20"></span>
+            <span>or</span>
+            <span class="h-px flex-1 bg-gray-300/50 dark:bg-white/20"></span>
+        </div>
 
-            <div class="mt-4 text-[11px] text-slate-300 text-center">
-                Already have an account?
-                <a href="{{ route('auth.login') }}" class="text-sky-400 hover:text-sky-300 font-medium">Sign in</a>
-            </div>
-        </main>
+        <div class="mt-4 text-xs text-gray-600 dark:text-gray-300 text-center">
+            Already have an account?
+            <a href="/login" class="text-sky-400 hover:text-sky-300 font-medium">Sign in</a>
+        </div>
+    </main>
 
-        <footer class="mt-4 text-[10px] text-slate-500 text-center">
-            <span>Tip: use a personal email you check often so you never miss budget reminders.</span>
-        </footer>
-    </div>
+    <footer class="mt-6 text-[10px] text-gray-500 text-center dark:text-gray-400">
+        Tip: use a personal email you check often so you never miss budget reminders.
+    </footer>
+</div>
 
-    <script>
-        (function () {
-            var body = document.body;
-            var storageKey = 'fintrack-register-theme';
-            var toggle = document.getElementById('register-theme-toggle');
+<script>
+(function(){
+    const html = document.documentElement; 
+    const toggle = document.getElementById('register-theme-toggle');
+    const icon = document.getElementById('theme-icon');
+    const text = document.getElementById('theme-text');
+    const key = 'fintrack-register-form-theme';
 
-            function applyTheme(theme) {
-                if (theme === 'light') {
-                    body.classList.add('theme-light');
-                } else {
-                    body.classList.remove('theme-light');
-                }
-            }
+    let theme = localStorage.getItem(key) || 'light'; // default light
 
-            var current = localStorage.getItem(storageKey) || 'dark';
-            applyTheme(current);
+    function applyTheme() {
+        if(theme === 'dark') {
+            html.classList.add('dark');
+        } else {
+            html.classList.remove('dark');
+        }
 
-            function updateLabel() {
-                if (!toggle) return;
-                toggle.textContent = current === 'light' ? 'Dark mode' : 'Light mode';
-            }
+        icon.textContent = theme === 'dark' ? '🌞' : '🌙';
+        text.textContent = theme === 'dark' ? 'Light' : 'Dark';
+    }
 
-            updateLabel();
+    applyTheme();
 
-            if (toggle) {
-                toggle.addEventListener('click', function () {
-                    current = current === 'light' ? 'dark' : 'light';
-                    localStorage.setItem(storageKey, current);
-                    applyTheme(current);
-                    updateLabel();
-                });
-            }
-        })();
-    </script>
+    toggle.addEventListener('click', () => {
+        theme = theme === 'light' ? 'dark' : 'light';
+        localStorage.setItem(key, theme);
+        applyTheme();
+    });
+})();
+</script>
 </body>
 </html>
