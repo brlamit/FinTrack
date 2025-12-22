@@ -77,6 +77,27 @@
             z-index: 1070; /* ensure it appears above dashboard/cards */
         }
 
+        /* More compact notification dropdown */
+        body.user-theme .notifications-menu {
+            min-width: 260px;
+            min-width: 350px;
+            padding: .5rem .85rem;
+            overflow-x: hidden; /* no horizontal scroll */
+            white-space: normal; allow wrapping
+        }
+
+        body.user-theme .notifications-menu .dropdown-item {
+            white-space: normal; /* wrap long text */
+            word-wrap: break-word;
+        }
+
+        body.user-theme #notif-list {
+            max-height: 260px;
+            max-width: 100%;
+            overflow-y: auto;   vertical scroll only
+            overflow-x: hidden; /* prevent horizontal scroll */
+        }
+
         /* Dark mode dropdown text */
         body.user-theme:not(.theme-light) .dropdown-menu .dropdown-item,
         body.user-theme:not(.theme-light) .dropdown-menu .dropdown-item i {
@@ -224,7 +245,7 @@
                             @endif
                         </a>
 
-                        <ul class="dropdown-menu dropdown-menu-end shadow p-2" style="min-width: 340px;">
+                        <ul class="dropdown-menu dropdown-menu-end shadow notifications-menu">
                             <li class="px-3 py-2 d-flex justify-content-between align-items-center border-bottom">
                                 <strong>Notifications</strong>
                                 <form id="mark-all-form" action="{{ route('user.notifications.mark-all-read') }}" method="POST">@csrf

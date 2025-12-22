@@ -16,7 +16,7 @@
                     <div class="position-relative d-inline-block mb-4">
                         <form id="avatar-form" action="{{ route('user.avatar.update') }}" method="POST" enctype="multipart/form-data">
                             @csrf
-                            <input type="file" name="avatar" id="avatar-input" accept="image/*" class="d-none">
+                            {{-- <input type="file" name="avatar" id="avatar-input" accept="image/*" class="d-none"> --}}
                             <label for="avatar-input" class="cursor-pointer">
                                 <img src="{{ auth()->user()->avatar }}?v={{ auth()->user()->updated_at->timestamp }}"
                                      alt="Profile Picture"
@@ -24,10 +24,10 @@
                                      width="140" height="140"
                                      style="object-fit: cover; transition: all 0.3s;"
                                      id="profile-avatar-img">
-                                <div class="position-absolute bottom-0 end-0 bg-primary rounded-circle p-3 shadow-lg hover-scale"
+                                {{-- <div class="position-absolute bottom-0 end-0 bg-primary rounded-circle p-3 shadow-lg hover-scale"
                                      style="transform: translate(20%, 20%);">
                                     <i class="fas fa-camera text-white"></i>
-                                </div>
+                                </div> --}}
                             </label>
                         </form>
 
@@ -207,7 +207,7 @@
 @endpush
 
 @push('scripts')
-<script>
+{{-- <script>
 document.getElementById('avatar-input')?.addEventListener('change', function(e) {
     const file = this.files[0];
     if (!file) return;
@@ -273,5 +273,5 @@ document.getElementById('avatar-input')?.addEventListener('change', function(e) 
         this.value = '';
     });
 });
-</script>
+</script> --}}
 @endpush
