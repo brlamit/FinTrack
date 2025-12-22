@@ -45,8 +45,8 @@ Route::prefix('auth')->group(function () {
     Route::post('forgot-password/send-link', [AuthController::class, 'sendResetLink']);
     Route::post('reset-password', [AuthController::class, 'resetPassword']);
 
-    // Password update w/ OTP
-    Route::put('password', [UserController::class, 'updatePassword']);
+    // Password update (API-friendly JSON endpoint)
+    Route::put('password', [AuthController::class, 'updatePassword']);
     Route::post('password/send-otp', [OtpController::class, 'sendPasswordChangeOtp']);
 
     // OTP Verify/Resend
@@ -81,6 +81,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('me', [AuthController::class, 'me']);
     Route::put('me', [AuthController::class, 'updateProfile']);
     Route::get('me/profile', [UserController::class, 'profile']);
+    // Combined profile update (name/phone + optional avatar) for mobile apps
+    Route::post('profile/edit', [UserController::class, 'updateProfileApi']);
 
     // Dashboard summary (JSON), mirroring the web dashboard
     Route::get('dashboard', [UserController::class, 'dashboard']);
@@ -119,8 +121,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // -------------------------------------------------------
     // 👥 GROUPS & MEMBERS
     // -------------------------------------------------------
-    Route::get('groups', [UserController::class, 'groups']);
-    Route::get('groups/{group}', [UserController::class, 'group']);
+    // JSON APIs for groups
+    Route::get('groups', [GroupController::class, 'index']);
+    Route::get('groups/{group}', [GroupController::class, 'show']);
     Route::get('groups/{group}/members', [GroupController::class, 'members']);
     Route::post('groups', [GroupController::class, 'store']);
     Route::delete('groups/{group}', [GroupController::class, 'destroy']);
@@ -130,8 +133,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('groups/{group}/invite-form', [GroupMemberController::class, 'inviteForm']);
     Route::delete('groups/{group}/members/{member}', [GroupMemberController::class, 'removeMember']);
 
-    // 🔥 Added from web.php (group transactions view)
-    Route::get('groups/{group}/transactions', [UserController::class, 'groupTransactions']);
+    // Group transactions JSON for mobile/web API consumers
+    Route::get('groups/{group}/transactions', [GroupController::class, 'transactions']);
 
 
     // -------------------------------------------------------
