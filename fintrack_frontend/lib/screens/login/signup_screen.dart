@@ -14,26 +14,30 @@ class _SignupScreenState extends State<SignupScreen> {
   final email = TextEditingController();
   final password = TextEditingController();
   final confirmPassword = TextEditingController();
-  final username = TextEditingController();
+
   bool loading = false;
 
   Future<void> signup() async {
+    if (password.text != confirmPassword.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Passwords do not match")),
+      );
+      return;
+    }
+
     setState(() => loading = true);
 
     try {
-      // Call API register — backend should send a verification code to email
       final payload = {
         'name': name.text.trim(),
         'email': email.text.trim(),
         'password': password.text,
         'password_confirmation': confirmPassword.text,
-        // 'username': username.text.trim(),
       };
 
       final ok = await ApiService.register(payload);
 
       if (ok) {
-        // Open OTP verification screen (it redirects to home after successful verify)
         // ignore: use_build_context_synchronously
         Navigator.pushReplacement(
           context,
@@ -43,9 +47,9 @@ class _SignupScreenState extends State<SignupScreen> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Signup Failed: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Signup Failed: $e")),
+      );
     }
 
     setState(() => loading = false);
@@ -54,46 +58,150 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Sign Up")),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
+      backgroundColor: const Color(0xFFE3F2FD), // Light blue background
+      body: Center(
         child: SingleChildScrollView(
-          child: Column(
-            children: [
-              TextField(
-                controller: name,
-                decoration: const InputDecoration(labelText: "Full Name"),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: email,
-                decoration: const InputDecoration(labelText: "Email"),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: password,
-                decoration: const InputDecoration(labelText: "Password"),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: confirmPassword,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: "Confirm Password",
+          padding: const EdgeInsets.all(20),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.blue.withOpacity(0.15),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
                 ),
-              ),
-              const SizedBox(height: 20),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.account_circle,
+                  size: 90,
+                  color: Colors.lightBlue,
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  "Create Account",
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.lightBlue,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  "Sign up to continue",
+                  style: TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 30),
 
-              ElevatedButton(
-                onPressed: loading ? null : signup,
-                child: loading
-                    ? const CircularProgressIndicator()
-                    : const Text("Create Account"),
-              ),
-            ],
+                _buildTextField(
+                  controller: name,
+                  label: "Full Name",
+                  icon: Icons.person,
+                ),
+                const SizedBox(height: 15),
+
+                _buildTextField(
+                  controller: email,
+                  label: "Email Address",
+                  icon: Icons.email,
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 15),
+
+                _buildTextField(
+                  controller: password,
+                  label: "Password",
+                  icon: Icons.lock,
+                  obscureText: true,
+                ),
+                const SizedBox(height: 15),
+
+                _buildTextField(
+                  controller: confirmPassword,
+                  label: "Confirm Password",
+                  icon: Icons.lock_outline,
+                  obscureText: true,
+                ),
+                const SizedBox(height: 25),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: loading ? null : signup,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.lightBlue,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: loading
+                        ? const CircularProgressIndicator(
+                            color: Colors.white,
+                          )
+                        : const Text(
+                            "Create Account",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                  ),
+                ),
+
+                const SizedBox(height: 15),
+
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    "Already have an account? Login",
+                    style: TextStyle(color: Colors.lightBlue),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool obscureText = false,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: Colors.lightBlue),
+        filled: true,
+        fillColor: const Color(0xFFF5F9FF),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    name.dispose();
+    email.dispose();
+    password.dispose();
+    confirmPassword.dispose();
+    super.dispose();
   }
 }
