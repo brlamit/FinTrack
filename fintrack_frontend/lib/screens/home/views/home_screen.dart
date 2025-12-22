@@ -92,8 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
             shape: BoxShape.circle,
             gradient: LinearGradient(
               colors: [
-                Theme.of(context).colorScheme.tertiary ??
-                    Theme.of(context).colorScheme.primary,
+                Theme.of(context).colorScheme.tertiary,
                 Theme.of(context).colorScheme.secondary,
                 Theme.of(context).colorScheme.primary,
               ],
