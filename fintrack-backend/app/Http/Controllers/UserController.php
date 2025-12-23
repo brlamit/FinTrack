@@ -1671,6 +1671,12 @@ public function dashboard(Request $request)
 
         $hasMoreTransactions = $transactionCount > $recentTransactions->count();
 
+        // Load categories for split expense form
+        $categories = \App\Models\Category::whereNull('user_id')
+            ->orWhere('user_id', auth()->id())
+            ->orderBy('name')
+            ->get();
+
         return view('user.groups.show', [
             'group' => $group,
             'groupTotals' => $groupTotals,
@@ -1678,6 +1684,7 @@ public function dashboard(Request $request)
             'memberStats' => $memberStats,
             'recentTransactions' => $recentTransactions,
             'hasMoreTransactions' => $hasMoreTransactions,
+            'categories' => $categories,
         ]);
     }
 
