@@ -44,63 +44,114 @@
             </p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            <a href="{{ route('user.groups') }}" class="btn btn-outline-secondary">Back to Groups</a>
+            <a href="{{ route('user.groups') }}" class="btn btn-outline-secondary rounded-pill">
+                <i class="fas fa-arrow-left me-2"></i>Back to Groups
+            </a>
         </div>
     </div>
 
-    <div class="row g-3 mb-4">
+    <!-- Modern Metrics Cards -->
+    <div class="row g-4 mb-4">
+        <!-- Financial Overview -->
         <div class="col-lg-4 col-sm-6">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <p class="text-muted text-uppercase small mb-1">Total Income</p>
-                    <h4 class="text-success fw-semibold mb-0">{{ $currency($groupTotals['income']) }}</h4>
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 16px; overflow: hidden;">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-success bg-opacity-10 rounded-circle p-3 me-3">
+                            <i class="fas fa-arrow-up text-success" style="font-size: 1.2rem;"></i>
+                        </div>
+                        <div>
+                            <p class="text-muted text-uppercase small mb-1">Total Income</p>
+                            <h4 class="text-success fw-bold mb-0">{{ $currency($groupTotals['income']) }}</h4>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+
         <div class="col-lg-4 col-sm-6">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <p class="text-muted text-uppercase small mb-1">Total Expense</p>
-                    <h4 class="text-danger fw-semibold mb-0">{{ $currency($groupTotals['expense']) }}</h4>
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 16px; overflow: hidden;">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-danger bg-opacity-10 rounded-circle p-3 me-3">
+                            <i class="fas fa-arrow-down text-danger" style="font-size: 1.2rem;"></i>
+                        </div>
+                        <div>
+                            <p class="text-muted text-uppercase small mb-1">Total Expense</p>
+                            <h4 class="text-danger fw-bold mb-0">{{ $currency($groupTotals['expense']) }}</h4>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+
         <div class="col-lg-4 col-sm-6">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <p class="text-muted text-uppercase small mb-1">Net Flow</p>
-                    @php $net = $groupTotals['net']; @endphp
-                    <h4 class="fw-semibold mb-0 {{ $net >= 0 ? 'text-success' : 'text-danger' }}">{{ $currency($net) }}</h4>
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 16px; overflow: hidden;">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                            <i class="fas fa-balance-scale text-primary" style="font-size: 1.2rem;"></i>
+                        </div>
+                        <div>
+                            <p class="text-muted text-uppercase small mb-1">Net Flow</p>
+                            @php $net = $groupTotals['net']; @endphp
+                            <h4 class="fw-bold mb-0 {{ $net >= 0 ? 'text-success' : 'text-danger' }}">{{ $currency($net) }}</h4>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row g-3 mb-4">
+    <!-- Transaction Metrics -->
+    <div class="row g-4 mb-4">
         <div class="col-lg-4 col-sm-6">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <p class="text-muted text-uppercase small mb-1">Total Transactions</p>
-                    <h4 class="fw-semibold mb-0">{{ number_format($transactionMetrics['count']) }}</h4>
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 16px; overflow: hidden;">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-info bg-opacity-10 rounded-circle p-3 me-3">
+                            <i class="fas fa-receipt text-info" style="font-size: 1.2rem;"></i>
+                        </div>
+                        <div>
+                            <p class="text-muted text-uppercase small mb-1">Total Transactions</p>
+                            <h4 class="fw-bold mb-0">{{ number_format($transactionMetrics['count']) }}</h4>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+
         <div class="col-lg-4 col-sm-6">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <p class="text-muted text-uppercase small mb-1">Average Amount</p>
-                    <h4 class="fw-semibold mb-0">{{ $currency($transactionMetrics['average']) }}</h4>
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 16px; overflow: hidden;">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-warning bg-opacity-10 rounded-circle p-3 me-3">
+                            <i class="fas fa-chart-line text-warning" style="font-size: 1.2rem;"></i>
+                        </div>
+                        <div>
+                            <p class="text-muted text-uppercase small mb-1">Average Amount</p>
+                            <h4 class="fw-bold mb-0">{{ $currency($transactionMetrics['average']) }}</h4>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+
         <div class="col-lg-4 col-sm-6">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <p class="text-muted text-uppercase small mb-1">Last Activity</p>
-                    <h4 class="fw-semibold mb-1">{{ $lastActivity ? $lastActivity->format('M d, Y') : 'No activity yet' }}</h4>
-                    @if($lastActivity)
-                        <span class="text-muted small">{{ $lastActivity->diffForHumans() }}</span>
-                    @endif
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 16px; overflow: hidden;">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-secondary bg-opacity-10 rounded-circle p-3 me-3">
+                            <i class="fas fa-clock text-secondary" style="font-size: 1.2rem;"></i>
+                        </div>
+                        <div>
+                            <p class="text-muted text-uppercase small mb-1">Last Activity</p>
+                            <h6 class="fw-bold mb-1">{{ $lastActivity ? $lastActivity->format('M d, Y') : 'No activity yet' }}</h6>
+                            @if($lastActivity)
+                                <span class="text-muted small">{{ $lastActivity->diffForHumans() }}</span>
+                            @endif
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -108,46 +159,92 @@
 
     <div class="row g-4">
         <div class="col-lg-8">
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
-                    <div>
-                        <h5 class="mb-0">Add Group Transaction</h5>
-                        <span class="text-muted small">Track shared income or expenses and decide how to split them.</span>
+            <!-- Modern Transaction Form Card -->
+            <div class="card border-0 shadow-sm mb-4" style="border-radius: 16px; overflow: hidden;">
+                <div class="card-header bg-white border-0 p-4">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                            <i class="fas fa-plus-circle text-primary" style="font-size: 1.2rem;"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0 fw-bold">Add Group Transaction</h5>
+                            <span class="text-muted small">Track shared income or expenses and decide how to split them</span>
+                        </div>
                     </div>
                 </div>
-                <div class="card-body">
-                    <form action="{{ route('groups.split', $group) }}" method="POST" enctype="multipart/form-data" id="add-expense-form" class="row g-3">
+                <div class="card-body p-4">
+                    <form action="{{ route('groups.split', $group) }}" method="POST" enctype="multipart/form-data" id="add-expense-form" class="row g-4">
                         @csrf
                         <div class="col-md-4">
-                            <label class="form-label">Total amount</label>
-                            <input type="number" step="0.01" name="amount" class="form-control" id="total-amount">
+                            <label class="form-label fw-semibold text-dark">Total Amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="fas fa-dollar-sign text-muted"></i>
+                                </span>
+                                <input type="number" step="0.01" name="amount" class="form-control border-start-0 ps-0"
+                                       style="border-radius: 0 8px 8px 0;" id="total-amount" placeholder="0.00">
+                            </div>
                         </div>
+
                         <div class="col-md-4">
-                            <label class="form-label">Transaction type</label>
+                            <label class="form-label fw-semibold text-dark">Transaction Type</label>
                             <div class="btn-group w-100" role="group" aria-label="Transaction type">
                                 <input type="radio" class="btn-check" name="type" id="type-expense" value="expense" autocomplete="off" checked>
-                                <label class="btn btn-outline-danger" for="type-expense">Expense</label>
+                                <label class="btn btn-outline-danger rounded-start-pill" for="type-expense">
+                                    <i class="fas fa-minus-circle me-1"></i>Expense
+                                </label>
                                 <input type="radio" class="btn-check" name="type" id="type-income" value="income" autocomplete="off">
-                                <label class="btn btn-outline-success" for="type-income">Income</label>
+                                <label class="btn btn-outline-success rounded-end-pill" for="type-income">
+                                    <i class="fas fa-plus-circle me-1"></i>Income
+                                </label>
                             </div>
                         </div>
+
                         <div class="col-md-4">
-                            <label class="form-label">Split method</label>
-                            <div class="btn-group w-100" role="group" aria-label="Split type">
+                            <label class="form-label fw-semibold text-dark">Split Method</label>
+                            <div class="btn-group w-100 flex-wrap" role="group" aria-label="Split type">
                                 <input type="radio" class="btn-check" name="split_type" id="split-type-equal" value="equal" autocomplete="off" checked>
-                                <label class="btn btn-outline-secondary" for="split-type-equal">Equal</label>
+                                <label class="btn btn-outline-secondary rounded-pill me-1 mb-1" for="split-type-equal">
+                                    <i class="fas fa-equals me-1"></i>Equal
+                                </label>
                                 <input type="radio" class="btn-check" name="split_type" id="split-type-custom" value="custom" autocomplete="off">
-                                <label class="btn btn-outline-secondary" for="split-type-custom">Custom</label>
+                                <label class="btn btn-outline-secondary rounded-pill me-1 mb-1" for="split-type-custom">
+                                    <i class="fas fa-sliders-h me-1"></i>Custom
+                                </label>
                                 <input type="radio" class="btn-check" name="split_type" id="split-type-percentage" value="percentage" autocomplete="off">
-                                <label class="btn btn-outline-secondary" for="split-type-percentage">Percent</label>
+                                <label class="btn btn-outline-secondary rounded-pill mb-1" for="split-type-percentage">
+                                    <i class="fas fa-percentage me-1"></i>Percent
+                                </label>
                             </div>
                         </div>
+
                         <div class="col-12">
-                            <label class="form-label">Description (optional)</label>
-                            <input type="text" name="description" class="form-control" placeholder="E.g. Grocery run or Rent contribution">
+                            <label class="form-label fw-semibold text-dark">Description (optional)</label>
+                            <input type="text" name="description" class="form-control"
+                                   style="border-radius: 8px;" placeholder="E.g. Grocery run or Rent contribution">
                         </div>
+
                         <div class="col-md-6">
-                            <label class="form-label">Receipt (optional)</label>
+                            <label class="form-label fw-semibold text-dark">Category (optional)</label>
+                            <select name="category_id" class="form-control" style="border-radius: 8px;">
+                                <option value="">Select a category (optional)</option>
+                                @if($categories->isNotEmpty())
+                                    @php
+                                        $groupedCategories = $categories->groupBy(fn ($category) => $category->type ?? 'uncategorized');
+                                    @endphp
+                                    @foreach($groupedCategories as $type => $typeCategories)
+                                        <optgroup label="{{ ucfirst($type) }}">
+                                            @foreach($typeCategories as $category)
+                                                <option value="{{ $category->id }}">{{ $category->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endforeach
+                                @endif
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-dark"></label>Receipt (optional)</label>
                             <input type="file" name="receipt" accept="image/*" class="form-control">
                         </div>
                         <div class="col-md-6 d-flex align-items-end justify-content-md-end gap-2">
@@ -514,4 +611,54 @@ document.addEventListener('DOMContentLoaded', function () {
     distributeAmounts();
 });
 </script>
+
+@push('styles')
+<style>
+.hover-shadow-lg {
+    transition: all 0.3s ease;
+}
+
+.hover-shadow-lg:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+}
+
+.transition-all {
+    transition: all 0.3s ease;
+}
+
+.card {
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.input-group-text {
+    border-radius: 8px 0 0 8px !important;
+}
+
+.form-control, .form-select {
+    border-radius: 0 8px 8px 0 !important;
+}
+
+.modal-content {
+    border: none !important;
+}
+
+.btn-group .btn {
+    border-radius: 8px !important;
+}
+
+.btn-outline-secondary {
+    border-color: #dee2e6 !important;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #f8f9fa !important;
+    border-color: #adb5bd !important;
+}
+</style>
+@endpush
 @endsection
