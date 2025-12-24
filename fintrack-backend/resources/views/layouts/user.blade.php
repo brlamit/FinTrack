@@ -16,33 +16,53 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
     <style>
+        :root {
+            --glass-bg: rgba(30,30,40,0.7);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+        }
+        .theme-light {
+            --glass-bg: rgba(255,255,255,0.9);
+            --text-primary: #111827;
+            --text-secondary: #475569;
+        }
+        .glass {
+            background-color: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 1.5rem;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .hero-bg {
+            background: radial-gradient(circle at top left, rgba(20,184,166,.15), transparent 50%),
+                        radial-gradient(circle at bottom right, rgba(14,165,233,.15), transparent 50%);
+        }
+
         /* Dark mode layout: match welcome page hero-style colors */
         body.user-theme {
             font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background:
-                radial-gradient(circle at top left, rgba(20,184,166,0.15), transparent 50%),
-                radial-gradient(circle at bottom right, rgba(14,165,233,0.15), transparent 50%),
-                #020617;
-            color: #e5e7eb;
+            background: var(--hero-bg, radial-gradient(circle at top left, rgba(20,184,166,0.15), transparent 50%),
+                        radial-gradient(circle at bottom right, rgba(14,165,233,0.15), transparent 50%),
+                        #0a0a0f);
+            color: var(--text-primary);
         }
 
         /* Light mode layout */
         body.user-theme.theme-light {
-            background: #f8fafc;
-            color: #020617;
+            background: var(--bg-primary);
+            color: var(--text-primary);
         }
 
         body.user-theme .navbar.fintrack-navbar {
-            background: rgba(15,23,42,0.96) !important;
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
-            border-bottom: 1px solid rgba(148,163,184,0.45);
+            background: var(--glass-bg) !important;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
             z-index: 1080; /* keep navbar + dropdowns above page content */
         }
 
         body.user-theme.theme-light .navbar.fintrack-navbar {
-            background: rgba(255,255,255,0.96) !important;
-            border-bottom-color: rgba(148,163,184,0.25);
+            background: var(--glass-bg) !important;
+            border-bottom-color: rgba(0,0,0,0.08);
         }
 
         /* Navbar text colors for dark/light */
@@ -50,31 +70,36 @@
         body.user-theme .navbar.fintrack-navbar .nav-link,
         body.user-theme .navbar.fintrack-navbar .dropdown-toggle,
         body.user-theme .navbar.fintrack-navbar .nav-link i {
-            color: #e5e7eb !important;
+            color: var(--text-primary) !important;
         }
 
         body.user-theme.theme-light .navbar.fintrack-navbar .navbar-brand,
         body.user-theme.theme-light .navbar.fintrack-navbar .nav-link,
         body.user-theme.theme-light .navbar.fintrack-navbar .dropdown-toggle,
         body.user-theme.theme-light .navbar.fintrack-navbar .nav-link i {
-            color: #020617 !important;
+            color: var(--text-primary) !important;
         }
 
         body.user-theme:not(.theme-light) .navbar.fintrack-navbar .nav-link.active {
-            color: #ffffff !important;
+            color: var(--text-primary) !important;
             font-weight: 600;
         }
 
         body.user-theme.theme-light .navbar.fintrack-navbar .nav-link.active {
-            color: #0f172a !important;
+            color: var(--text-primary) !important;
             font-weight: 600;
         }
 
         /* Dropdown menu theming */
         body.user-theme .dropdown-menu {
-            background-color: #020617;
+            background-color: var(--glass-bg);
             border-color: rgba(30,64,175,0.6);
             z-index: 1070; /* ensure it appears above dashboard/cards */
+        }
+
+        body.user-theme .dropdown-menu .dropdown-item,
+        body.user-theme .dropdown-menu .dropdown-item i {
+            color: var(--text-primary);
         }
 
         /* More compact notification dropdown */
@@ -111,47 +136,47 @@
 
         /* Light mode dropdown */
         body.user-theme.theme-light .dropdown-menu {
-            background-color: #ffffff;
+            background-color: var(--glass-bg);
             border-color: rgba(148,163,184,0.35);
         }
 
         body.user-theme.theme-light .dropdown-menu .dropdown-item,
         body.user-theme.theme-light .dropdown-menu .dropdown-item i {
-            color: #020617;
+            color: var(--text-primary);
         }
 
         /* Card base colors so dashboard content is readable but still Bootstrap-like */
         body.user-theme .card {
-            background-color: #020617;
-            color: #e5e7eb;
+            background-color: var(--glass-bg);
+            color: var(--text-primary);
             border-color: rgba(30,64,175,0.55);
         }
 
         body.user-theme.theme-light .card {
-            background-color: #ffffff;
-            color: #020617;
+            background-color: var(--glass-bg);
+            color: var(--text-primary);
             border-color: rgba(148,163,184,0.35);
         }
 
         body.user-theme .card-header.bg-white,
         body.user-theme .card-header {
-            background-color: rgba(15,23,42,0.98) !important;
+            background-color: var(--glass-bg) !important;
             border-bottom-color: rgba(30,64,175,0.55) !important;
         }
 
         body.user-theme.theme-light .card-header.bg-white,
         body.user-theme.theme-light .card-header {
-            background-color: #ffffff !important;
+            background-color: var(--glass-bg) !important;
             border-bottom-color: rgba(148,163,184,0.35) !important;
         }
 
         /* Muted text should stay readable in both themes */
         body.user-theme .text-muted {
-            color: #9ca3af !important;
+            color: var(--text-secondary) !important;
         }
 
         body.user-theme.theme-light .text-muted {
-            color: #6b7280 !important;
+            color: var(--text-secondary) !important;
         }
 
         .fintrack-brand-mark {
@@ -180,8 +205,8 @@
         .theme-toggle-btn-global {
             border-radius: 999px;
             border: 1px solid rgba(148,163,184,0.55);
-            background: rgba(15,23,42,0.9);
-            color: #e5e7eb;
+            background: var(--glass-bg);
+            color: var(--text-primary);
             padding: .4rem .9rem;
             font-size: .8rem;
             display: inline-flex;
@@ -190,8 +215,8 @@
         }
 
         body.user-theme.theme-light .theme-toggle-btn-global {
-            background: #ffffff;
-            color: #0f172a;
+            background: var(--glass-bg);
+            color: var(--text-primary);
         }
     </style>
 
