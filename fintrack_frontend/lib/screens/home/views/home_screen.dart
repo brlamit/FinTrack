@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 
@@ -19,8 +18,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int index = 0;
-  final Color selectedItem = Colors.blue;
-  final Color unselectedItem = Colors.grey;
+  final Color selectedItem = const Color(0xFF1565C0); // Darker blue
+  final Color unselectedItem = const Color(0xFF616161); // Grey 700
   late Map<String, dynamic> _dashboard;
 
   @override
@@ -50,33 +49,50 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
 
       // Bottom navigation bar
-      bottomNavigationBar: ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-        child: BottomNavigationBar(
-          currentIndex: index,
-          onTap: (value) => setState(() => index = value),
-          showSelectedLabels: false,
-          showUnselectedLabels: false,
-          items: [
-            BottomNavigationBarItem(
-              icon: Icon(
-                CupertinoIcons.home,
-                color: index == 0 ? selectedItem : unselectedItem,
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
+        child: PhysicalModel(
+          color: Colors.transparent,
+          elevation: 24,
+          borderRadius: BorderRadius.circular(32),
+          clipBehavior: Clip.antiAlias,
+          child: BottomAppBar(
+            color: theme.colorScheme.surfaceContainerHigh,
+            shape: const CircularNotchedRectangle(),
+            notchMargin: 8,
+            child: SizedBox(
+              height: 64,
+              child: Row(
+                children: [
+                  const SizedBox(width: 16),
+                  _NavItem(
+                    icon: CupertinoIcons.home,
+                    label: 'Home',
+                    selected: index == 0,
+                    onTap: () => setState(() => index = 0),
+                    selectedColor: selectedItem,
+                    unselectedColor: unselectedItem,
+                  ),
+                  const Spacer(), // center gap under FAB notch
+                  _NavItem(
+                    icon: CupertinoIcons.doc_chart,
+                    label: 'Reports',
+                    selected: index == 1,
+                    onTap: () => setState(() => index = 1),
+                    selectedColor: selectedItem,
+                    unselectedColor: unselectedItem,
+                  ),
+                  const SizedBox(width: 16),
+                ],
               ),
-              label: "Home",
             ),
-            BottomNavigationBarItem(
-              icon: Icon(
-                CupertinoIcons.doc_chart,
-                color: index == 1 ? selectedItem : unselectedItem,
-              ),
-              label: "Reports",
-            ),
-          ],
+          ),
         ),
       ),
 
@@ -86,21 +102,13 @@ class _HomeScreenState extends State<HomeScreen> {
         shape: const CircleBorder(),
         onPressed: _openAddTransaction,
         child: Container(
-          width: 60,
-          height: 60,
+          width: 100,
+          height: 100,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: [
-                Theme.of(context).colorScheme.tertiary ??
-                    Theme.of(context).colorScheme.primary,
-                Theme.of(context).colorScheme.secondary,
-                Theme.of(context).colorScheme.primary,
-              ],
-              transform: const GradientRotation(pi / 4),
-            ),
+            color: theme.colorScheme.primary,
           ),
-          child: const Icon(CupertinoIcons.add),
+          child: const Icon(CupertinoIcons.add, color: Colors.white),
         ),
       ),
 
@@ -116,6 +124,52 @@ class _HomeScreenState extends State<HomeScreen> {
               onAddTransaction: _openAddTransaction,
             )
           : StatScreen(rawDashboard: _dashboard['raw']),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final Color selectedColor;
+  final Color unselectedColor;
+
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    required this.selectedColor,
+    required this.unselectedColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? selectedColor : unselectedColor;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(24),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
