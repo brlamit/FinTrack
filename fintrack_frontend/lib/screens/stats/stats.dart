@@ -1,6 +1,5 @@
 import 'dart:io';
 
-<<<<<<< HEAD
 import 'package:fintrack_frontend/services/api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -132,10 +131,6 @@ class _StatScreenState extends State<StatScreen> {
       decimalDigits: 2,
     ).format(value);
   }
-=======
-class StatScreen extends StatelessWidget {
-  const StatScreen({super.key, required rawDashboard});
->>>>>>> 80b062ea2566594326e2594a6513824d6ece807c
 
   @override
   Widget build(BuildContext context) {

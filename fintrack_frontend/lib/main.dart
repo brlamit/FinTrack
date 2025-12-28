@@ -32,41 +32,5 @@ void main() async {
   runApp(const MyApp());
 }
 
-<<<<<<< HEAD
 // MyApp widget comes from app.dart, which wraps the
 // whole app in MyAppView (with global theming, routes, etc.).
-=======
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-
-      initialRoute: '/register',
-
-      routes: {
-        '/splash': (_) => const SplashScreen(),
-        '/login': (_) => LoginScreen(),
-        '/register': (_) => SignupScreen(),
-        '/forgot-password': (_) => ForgotPasswordScreen(),
-        '/home': (context) {
-          final args =
-              ModalRoute.of(context)!.settings.arguments
-                  as Map<String, dynamic>;
-
-          final user = args['user'] as Map<String, dynamic>;
-          final dashboard = args['dashboard'] as Map<String, dynamic>;
-
-          return HomeScreen(user: user, dashboard: dashboard);
-        },
-      },
-      onUnknownRoute: (settings) {
-        // Fallback for unregistered routes — send user to login
-        return MaterialPageRoute(builder: (_) => LoginScreen());
-      },
-    );
-  }
-}
->>>>>>> 80b062ea2566594326e2594a6513824d6ece807c

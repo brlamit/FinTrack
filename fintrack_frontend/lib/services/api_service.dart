@@ -1029,12 +1029,8 @@ class ApiService {
     double? amount,
     required String type,
     required DateTime transactionDate,
-<<<<<<< HEAD
     String? description,
     int? receiptId,
-=======
-    String? description, int? receiptId,
->>>>>>> 80b062ea2566594326e2594a6513824d6ece807c
   }) async {
     try {
       final headers = <String, String>{'Content-Type': 'application/json'};
@@ -1590,36 +1586,4 @@ class ApiService {
   // -------------------------
   // UPLOAD RECEIPT FOR TRANSACTION
   // -------------------------
-  static Future<Map<String, dynamic>> uploadReceiptForTransaction({
-    required String filename,
-    required List<int> bytes,
-  }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
-    
-    if (token == null) {
-      throw Exception('Not authenticated');
-    }
-
-    final uri = Uri.parse('$backendBaseUrl/receipts/upload');
-    final request = http.MultipartRequest('POST', uri);
-    
-    request.headers['Authorization'] = 'Bearer $token';
-    request.files.add(
-      http.MultipartFile.fromBytes(
-        'file',
-        bytes,
-        filename: filename,
-      ),
-    );
-
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return json.decode(response.body) as Map<String, dynamic>;
-    } else {
-      throw Exception('Failed to upload receipt: ${response.body}');
-    }
-  }
 }
