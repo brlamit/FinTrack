@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'screens/login/login_screen.dart';
 import 'package:fintrack_frontend/services/api_service.dart';
-import 'screens/login/signup_screen.dart';
-import 'screens/splash_screen.dart';
-import 'screens/login/forgot_password_screen.dart';
-import 'screens/home/views/home_screen.dart';
+import 'app.dart';
 // import 'package:fintrack_frontend/services/in_memory_expense_repo.dart';
 // import 'package:flutter_bloc/flutter_bloc.dart';
 // import 'screens/home/blocs/get_expenses_bloc/get_expenses_bloc.dart';
@@ -36,36 +32,5 @@ void main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-
-      initialRoute: '/splash',
-
-      routes: {
-        '/splash': (_) => const SplashScreen(),
-        '/login': (_) => LoginScreen(),
-        '/register': (_) => SignupScreen(),
-        '/forgot-password': (_) => ForgotPasswordScreen(),
-        '/home': (context) {
-          final args =
-              ModalRoute.of(context)!.settings.arguments
-                  as Map<String, dynamic>;
-
-          final user = args['user'] as Map<String, dynamic>;
-          final dashboard = args['dashboard'] as Map<String, dynamic>;
-
-          return HomeScreen(user: user, dashboard: dashboard);
-        },
-      },
-      onUnknownRoute: (settings) {
-        // Fallback for unregistered routes — send user to login
-        return MaterialPageRoute(builder: (_) => LoginScreen());
-      },
-    );
-  }
-}
+// MyApp widget comes from app.dart, which wraps the
+// whole app in MyAppView (with global theming, routes, etc.).
