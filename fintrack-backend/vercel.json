@@ -2,11 +2,18 @@
   "buildCommand": "npm run build",
   "outputDirectory": "public",
   "functions": {
-    "api/index.php": {
-      "runtime": "vercel-php@0.7.0"
+    "api/**/*.php": {
+      "runtime": "vercel-php@0.7.4"
     }
   },
   "routes": [
-    { "src": "/(.*)", "dest": "/routes/api.php" }
+    {
+      "src": "/build/(.*)",
+      "dest": "/public/build/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.php"
+    }
   ]
 }
